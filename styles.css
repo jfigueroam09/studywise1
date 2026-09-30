@@ -1819,3 +1819,20 @@ h3 {
 .hero::after {
   display: none !important;
 }
+
+/* Veu del professorat · estil minimalista */
+
+.teacher-quote {
+  background: #0b0b0b !important;
+  border-left: 2px solid #666 !important;
+  border-radius: 0 10px 10px 0;
+  box-shadow: none !important;
+}
+
+.teacher-quote-label {
+  color: #bdbdbd !important;
+}
+
+.teacher-quote blockquote {
+  color: #a8a8a8 !important;
+}
