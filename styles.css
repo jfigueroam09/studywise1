@@ -1918,3 +1918,92 @@ h3 {
   position: relative;
   z-index: 1;
 }
+
+/* =========================================================
+   TRIA · HERO MINIMALISTA
+   La luz nace únicamente desde la cita del profesorado
+   ========================================================= */
+
+/* Hero limpio, sin luz propia */
+
+.hero {
+  position: relative;
+  overflow: visible;
+  isolation: isolate;
+  background: #0a0a0a !important;
+}
+
+.hero::before,
+.hero::after {
+  display: none !important;
+}
+
+
+/* =========================================================
+   CITA DEL PROFESORADO
+   ========================================================= */
+
+.teacher-quote {
+  position: relative;
+  overflow: visible;
+
+  background: transparent !important;
+
+  border-left: 2px solid #8b7cff !important;
+  border-radius: 0;
+
+  box-shadow: none !important;
+}
+
+
+/* Luz morada que nace exactamente en la barra */
+
+.teacher-quote::before {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  top: 50%;
+
+  width: 900px;
+  height: 90px;
+
+  transform: translateY(-50%);
+
+  background: linear-gradient(
+    90deg,
+    rgba(139, 124, 255, 0.14) 0%,
+    rgba(139, 124, 255, 0.08) 18%,
+    rgba(139, 124, 255, 0.04) 38%,
+    rgba(139, 124, 255, 0.018) 60%,
+    rgba(139, 124, 255, 0.005) 78%,
+    transparent 100%
+  );
+
+  filter: blur(28px);
+
+  pointer-events: none;
+
+  z-index: -1;
+}
+
+
+/* Contenido siempre por encima de la luz */
+
+.teacher-quote-label,
+.teacher-quote blockquote {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* Texto de la cita */
+
+.teacher-quote-label {
+  color: #bdbdbd !important;
+}
+
+.teacher-quote blockquote {
+  color: #a8a8a8 !important;
+}
