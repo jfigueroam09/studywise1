@@ -109,12 +109,18 @@ aside{
 }
 
 .creator{
-  display:block;
-  margin-top:3px;
-  font-size:10px;
-  font-weight:500;
-  color:#7f8da3;
-  white-space:nowrap;
+ .brand-text{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+}
+
+.school-logo{
+  width:34px;
+  height:34px;
+  object-fit:contain;
+  margin-left:auto;
+  border-radius:6px;
 }
 
 nav{
