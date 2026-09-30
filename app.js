@@ -810,14 +810,6 @@ function tasksView() {
 
         </div>
 
-        <button
-          class="btn primary"
-          data-action="new-task"
-        >
-          ${icon('plus', 17)}
-          Nova tasca
-        </button>
-
       </div>
 
       <div class="task-list">
@@ -838,7 +830,6 @@ function tasksView() {
     </div>
   `;
 }
-
 function examsView() {
   const exams =
     [...state.exams].sort(
