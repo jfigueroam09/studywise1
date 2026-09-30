@@ -1,23 +1,69 @@
-const model = process.env.OPENAI_MODEL || '';
-const apiKey = process.env.OPENAI_API_KEY || '';
+const apiKey = process.env.GEMINI_API_KEY || '';
 
-export const aiConfigured = Boolean(apiKey && model);
+const model = 'gemini-2.5-flash-lite';
+
+export const aiConfigured = Boolean(apiKey);
 
 export async function openAI(input, instructions, format) {
-  if (!aiConfigured) throw new Error('La IA real no está configurada. Añade OPENAI_API_KEY y OPENAI_MODEL en Vercel.');
-  const body = { model, instructions, input };
-  if (format) body.text = { format };
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
+  if (!aiConfigured) {
+    throw new Error(
+      'La IA real no está configurada. Añade GEMINI_API_KEY en Vercel.'
+    );
+  }
+
+  const body = {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          {
+            text: `${instructions}\n\nDatos de StudyWise:\n${input}`
+          }
+        ]
+      }
+    ]
+  };
+
+  if (format?.type === 'json_schema') {
+    body.generationConfig = {
+      responseMimeType: 'application/json',
+      responseSchema: format.schema
+    };
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    }
+  );
+
   const data = await response.json();
-  if (!response.ok) throw new Error(data?.error?.message || `OpenAI HTTP ${response.status}`);
-  return data;
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error?.message || `Gemini HTTP ${response.status}`
+    );
+  }
+
+  const text =
+    data?.candidates?.[0]?.content?.parts
+      ?.map(part => part.text || '')
+      .join('') || '';
+
+  if (!text) {
+    throw new Error('Gemini no devolvió ningún texto.');
+  }
+
+  return {
+    output_text: text
+  };
 }
 
 export function outputText(data) {
-  if (typeof data.output_text === 'string') return data.output_text;
-  return data.output?.flatMap(x => x.content || []).find(c => c.type === 'output_text')?.text || '';
+  return data?.output_text || '';
 }
