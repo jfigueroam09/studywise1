@@ -1090,11 +1090,12 @@ function plannerView() {
                           </span>
 
                           <strong>
-                            ${esc(
-                              task?.title ||
-                              'Sessió'
-                            )}
-                          </strong>
+  ${esc(
+    task?.title
+      ? `Estudi: ${task.title}`
+      : 'Sessió'
+  )}
+</strong>
 
                           <small>
                             ${s.minutes} min
