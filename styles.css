@@ -1398,27 +1398,6 @@ label {
     #101720;
 }
 
-.hero::before {
-  content: "";
-  position: absolute;
-  width: 520px;
-  height: 520px;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-
-  background: radial-gradient(
-    circle,
-    rgba(139, 124, 255, 0.12) 0%,
-    rgba(139, 124, 255, 0.05) 35%,
-    transparent 70%
-  );
-
-  filter: blur(35px);
-  pointer-events: none;
-  z-index: -1;
-}
 
 .hero > * {
   position: relative;
@@ -1575,32 +1554,6 @@ h3 {
 
 /* Luz central muy suave */
 
-.hero::before {
-  content: "";
-  position: absolute;
-
-  width: 700px;
-  height: 420px;
-
-  left: 50%;
-  top: 50%;
-
-  transform: translate(-50%, -50%);
-
-  border-radius: 50%;
-
-  background: radial-gradient(
-    ellipse,
-    rgba(255, 255, 255, 0.055) 0%,
-    rgba(255, 255, 255, 0.025) 30%,
-    transparent 70%
-  );
-
-  filter: blur(45px);
-
-  pointer-events: none;
-  z-index: -1;
-}
 
 
 /* Evita que el contenido quede debajo de la luz */
@@ -1792,13 +1745,6 @@ h3 {
   background: #0a0a0a !important;
 }
 
-.hero::before {
-  display: none !important;
-}
-
-.hero::after {
-  display: none !important;
-}
 
 /* Luz sutil y difusa del hero */
 
@@ -1815,10 +1761,6 @@ h3 {
     #0a0a0a !important;
 }
 
-.hero::before,
-.hero::after {
-  display: none !important;
-}
 
 /* Veu del professorat · estil minimalista */
 
@@ -1846,34 +1788,7 @@ h3 {
   background: #0a0a0a !important;
 }
 
-.hero::before {
-  content: "";
-  position: absolute;
 
-  left: -10%;
-  top: 50%;
-  transform: translateY(-50%);
-
-  width: 120%;
-  height: 180px;
-
-  background: linear-gradient(
-    90deg,
-    rgba(139, 124, 255, 0.14) 0%,
-    rgba(139, 124, 255, 0.09) 20%,
-    rgba(139, 124, 255, 0.045) 42%,
-    rgba(139, 124, 255, 0.015) 65%,
-    transparent 90%
-  );
-
-  filter: blur(45px);
-  pointer-events: none;
-  z-index: -1;
-}
-
-.hero::after {
-  display: none !important;
-}
 
 /* Luz morada horizontal definitiva de TRIA */
 
@@ -1884,35 +1799,8 @@ h3 {
   background: #0a0a0a !important;
 }
 
-.hero::before {
-  content: "";
-  display: block !important;
 
-  position: absolute;
-  left: -15%;
-  top: 50%;
-  transform: translateY(-50%);
 
-  width: 130%;
-  height: 220px;
-
-  background: linear-gradient(
-    90deg,
-    rgba(139, 124, 255, 0.12) 0%,
-    rgba(139, 124, 255, 0.075) 22%,
-    rgba(139, 124, 255, 0.035) 45%,
-    rgba(139, 124, 255, 0.012) 65%,
-    transparent 90%
-  );
-
-  filter: blur(50px);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.hero::after {
-  display: none !important;
-}
 
 .hero > * {
   position: relative;
@@ -1933,10 +1821,6 @@ h3 {
   background: #0a0a0a !important;
 }
 
-.hero::before,
-.hero::after {
-  display: none !important;
-}
 
 
 /* =========================================================
@@ -2006,4 +1890,50 @@ h3 {
 
 .teacher-quote blockquote {
   color: #a8a8a8 !important;
+}
+
+/* =========================================
+   TRIA - Luz de la cita del profesorado
+   ========================================= */
+
+.teacher-quote {
+  position: relative;
+  overflow: hidden;
+  background: transparent !important;
+  border-left: 2px solid #8b7cff !important;
+}
+
+
+/* Rectángulo de luz que nace en la barra */
+
+.teacher-quote::before {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  top: 0;
+
+  width: 850px;
+  height: 100%;
+
+  background: linear-gradient(
+    90deg,
+    rgba(139,124,255,0.18) 0%,
+    rgba(139,124,255,0.10) 25%,
+    rgba(139,124,255,0.04) 55%,
+    transparent 100%
+  );
+
+  filter: blur(22px);
+
+  pointer-events: none;
+}
+
+
+/* El texto queda encima */
+
+.teacher-quote * {
+  position: relative;
+  z-index: 2;
 }
