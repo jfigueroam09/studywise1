@@ -46,6 +46,26 @@ function esc(value = '') {
     .replaceAll("'", '&#039;');
 }
 
+function chatMarkdown(text) {
+  let html = esc(text || '');
+
+  html = html
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^\s*[-•] (.+)$/gm, '<li>$1</li>')
+    .replace(/^\s*(\d+)\.\s+(.+)$/gm, '<li>$2</li>')
+    .replace(/\n/g, '<br>');
+
+  html = html.replace(
+    /(<li>.*?<\/li>)(?:<br>|$)/g,
+    '$1'
+  );
+
+  return html;
+}
 function todayISO() {
   const d = new Date();
   const offset = d.getTimezoneOffset();
@@ -1181,13 +1201,7 @@ function chatView() {
               ? state.chat.map(m => `
                   <div class="message ${m.role}">
                     <div class="message-bubble">
-                      ${
-                        esc(m.text)
-                          .replaceAll(
-                            '\n',
-                            '<br>'
-                          )
-                      }
+                ${chatMarkdown(m.text)}
                     </div>
                   </div>
                 `).join('')
