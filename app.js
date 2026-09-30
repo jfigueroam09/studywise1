@@ -257,7 +257,7 @@ function layout(){
       </main>
 
 
-      ${modalHtml()}
+      ${buildModalHtml()}
 
     </div>
   `;
@@ -1447,8 +1447,8 @@ function settings(){
    MODAL
 ========================= */
 
-function modalHtml(){
-
+function buildModalHtml(){
+  
   if(!modal) return '';
 
   let isTask=modal==='task';
