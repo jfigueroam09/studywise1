@@ -1424,3 +1424,364 @@ label {
   position: relative;
   z-index: 1;
 }
+
+/* =========================================================
+   TRIA · ESTILO NEGRO MINIMALISTA
+   Inspirado en la sobriedad visual de OpenAI
+   ========================================================= */
+
+:root {
+  --ink: #f5f5f5;
+  --muted: #8b8b8b;
+  --line: #242424;
+
+  --card: #0d0d0d;
+  --card2: #111111;
+
+  --accent: #8b7cff;
+  --accent2: #1b1930;
+  --accent3: #b8b1ff;
+
+  --danger: #ff6b6b;
+  --success: #4ade80;
+
+  --shadow: 0 12px 40px rgba(0, 0, 0, .35);
+}
+
+
+/* ---------- FONDO GENERAL ---------- */
+
+html,
+body,
+.app {
+  background: #050505;
+  color: #f5f5f5;
+}
+
+
+/* ---------- BARRA LATERAL ---------- */
+
+aside {
+  background: #080808;
+  border-right: 1px solid #1d1d1d;
+}
+
+nav button {
+  color: #858585;
+}
+
+nav button:hover {
+  background: #111111;
+  color: #f5f5f5;
+}
+
+nav button.active {
+  background: #171717;
+  color: #f5f5f5;
+}
+
+
+/* ---------- LOGO ---------- */
+
+.logo {
+  background: #151515;
+  color: #ffffff;
+  box-shadow: none;
+  border: 1px solid #292929;
+}
+
+
+/* ---------- CONTENIDO ---------- */
+
+.main {
+  background: #050505;
+}
+
+h1,
+h2,
+h3 {
+  color: #f5f5f5;
+}
+
+.eyebrow {
+  color: #777777;
+}
+
+
+/* ---------- BOTÓN PRINCIPAL ---------- */
+
+.primary {
+  background: #f2f2f2;
+  color: #050505;
+  box-shadow: none;
+}
+
+.primary:hover {
+  background: #ffffff;
+  filter: none;
+  transform: translateY(-1px);
+}
+
+
+/* ---------- TARJETAS ---------- */
+
+.card,
+.stat {
+  background: #0b0b0b;
+  border-color: #222222;
+  box-shadow: none;
+}
+
+.stat-icon {
+  background: #151515;
+  color: #bdbdbd;
+}
+
+
+/* ---------- TEXTO SECUNDARIO ---------- */
+
+.stat span,
+.task-main span,
+.exam-info span,
+.exam-info small,
+.due,
+.privacy {
+  color: #858585;
+}
+
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+
+  background:
+    radial-gradient(
+      ellipse 70% 80% at 50% 50%,
+      rgba(255, 255, 255, 0.055) 0%,
+      rgba(255, 255, 255, 0.025) 28%,
+      rgba(255, 255, 255, 0.008) 48%,
+      transparent 72%
+    ),
+    #0a0a0a;
+
+  border-color: #2a2a2a;
+}
+
+
+/* Luz central muy suave */
+
+.hero::before {
+  content: "";
+  position: absolute;
+
+  width: 700px;
+  height: 420px;
+
+  left: 50%;
+  top: 50%;
+
+  transform: translate(-50%, -50%);
+
+  border-radius: 50%;
+
+  background: radial-gradient(
+    ellipse,
+    rgba(255, 255, 255, 0.055) 0%,
+    rgba(255, 255, 255, 0.025) 30%,
+    transparent 70%
+  );
+
+  filter: blur(45px);
+
+  pointer-events: none;
+  z-index: -1;
+}
+
+
+/* Evita que el contenido quede debajo de la luz */
+
+.hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+
+/* ---------- PANEL IA ---------- */
+
+.ai-card {
+  background: #0c0c0c;
+  border-color: #252525;
+}
+
+.ai-badge {
+  background: #171717;
+  color: #d0d0d0;
+}
+
+
+/* ---------- PRIORIDADES ---------- */
+
+.recommend {
+  border-top-color: #222222;
+}
+
+.recommend > span {
+  background: #171717;
+  color: #ffffff;
+}
+
+
+/* ---------- EXÁMENES ---------- */
+
+.date-box {
+  background: #151515;
+  color: #dddddd;
+}
+
+
+/* ---------- PLANIFICADOR ---------- */
+
+.day {
+  background: #0b0b0b;
+  border-color: #222222;
+}
+
+.session {
+  background: #121212;
+  border-color: #272727;
+  color: #dddddd;
+}
+
+.session span {
+  color: #999999;
+}
+
+
+/* ---------- CHAT ---------- */
+
+.suggestions button {
+  background: #0c0c0c;
+  border-color: #252525;
+  color: #aaaaaa;
+}
+
+.suggestions button:hover {
+  background: #141414;
+  border-color: #333333;
+}
+
+.message p {
+  background: #151515;
+  color: #dddddd;
+}
+
+.message.user p {
+  background: #f2f2f2;
+  color: #050505;
+}
+
+
+/* ---------- INPUT CHAT ---------- */
+
+.chat-input input {
+  background: #0b0b0b;
+  border-color: #282828;
+  color: #f5f5f5;
+}
+
+.chat-input input::placeholder {
+  color: #666666;
+}
+
+.chat-input input:focus {
+  border-color: #555555;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.04);
+}
+
+
+/* ---------- PROGRESO ---------- */
+
+.ring {
+  background:
+    conic-gradient(
+      #f0f0f0 var(--p),
+      #202020 0
+    );
+}
+
+.ring::after {
+  background: #0b0b0b;
+}
+
+
+/* ---------- ESTADO IA ---------- */
+
+.side-note {
+  background: #0d0d0d;
+  border-color: #242424;
+  color: #d0d0d0;
+}
+
+.side-note span {
+  color: #777777;
+}
+
+
+/* ---------- MODALES ---------- */
+
+.modal {
+  background: #0d0d0d;
+  border-color: #292929;
+}
+
+.field span {
+  color: #999999;
+}
+
+.field input,
+.field textarea,
+.field select {
+  background: #0b0b0b;
+  color: #f5f5f5;
+  border-color: #292929;
+}
+
+.field input:focus,
+.field textarea:focus,
+.field select:focus {
+  border-color: #555555;
+}
+
+
+/* ---------- BOTONES SECUNDARIOS ---------- */
+
+.ghost {
+  color: #888888;
+}
+
+.ghost:hover {
+  background: #151515;
+  color: #ffffff;
+}
+
+
+/* ---------- LÍNEAS ---------- */
+
+.task-row,
+.task-with-actions,
+.activity {
+  border-color: #202020;
+}
+
+
+/* ---------- SELECCIÓN DE TEXTO ---------- */
+
+::selection {
+  background: #ffffff;
+  color: #050505;
+}
