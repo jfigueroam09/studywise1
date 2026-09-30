@@ -1,57 +1,92 @@
 import { aiConfigured, openAI, outputText } from '../../ai.js';
 
 const daysUntil = date =>
-  Math.ceil((new Date(`${date}T23:59:59`) - Date.now()) / 86400000);
-
-const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-
-function demoPlan(tasks = [], exams = []) {
-  const boosts = new Map(
-    exams.map(e => [e.subject, Math.max(0, 10 - daysUntil(e.date))])
+  Math.ceil(
+    (new Date(`${date}T23:59:59`) - Date.now()) / 86400000
   );
 
-  const priorities = tasks
-    .filter(t => t.status !== 'completed')
-    .map(t => {
-      const days = daysUntil(t.dueDate);
-      const urgency = clamp(10 - Math.max(days, 0) * 0.9, 0, 10);
-      const difficulty = Number(t.difficulty || 3) * 2;
-      const effort = clamp(Number(t.minutes || 30) / 30, 1, 10);
-      const exam = boosts.get(t.subject) || 0;
+const clamp = (n, a, b) =>
+  Math.max(a, Math.min(b, n));
+
+function demoPlan(tasks = [], exams = []) {
+  const items = [
+    ...tasks
+      .filter(t => t.status !== 'completed')
+      .map(t => ({
+        targetType: 'task',
+        targetId: t.id,
+        title: t.title,
+        subject: t.subject,
+        date: t.dueDate,
+        minutes: Number(t.minutes || 30),
+        difficulty: Number(t.difficulty || 3)
+      })),
+
+    ...exams.map(e => ({
+      targetType: 'exam',
+      targetId: e.id,
+      title: e.subject,
+      subject: e.subject,
+      date: e.date,
+      minutes: Number(e.availableMinutes || 60),
+      difficulty: Number(e.difficulty || 3)
+    }))
+  ];
+
+  const priorities = items
+    .map(item => {
+      const days = daysUntil(item.date);
+
+      const urgency = clamp(
+        10 - Math.max(days, 0) * 0.9,
+        0,
+        10
+      );
+
+      const difficulty = item.difficulty * 2;
+
+      const effort = clamp(
+        item.minutes / 30,
+        1,
+        10
+      );
 
       const score =
-        urgency * 0.42 +
+        urgency * 0.5 +
         difficulty * 0.2 +
-        effort * 0.13 +
-        exam * 0.25;
+        effort * 0.15 +
+        (item.targetType === 'exam' ? 2 : 0);
 
       return {
-        taskId: t.id,
-        priority: clamp(Math.round(score), 1, 10),
-        reason:
-          exam > 4
-            ? `Tienes un examen próximo de ${t.subject}.`
-            : days <= 2
-              ? 'La fecha de entrega está muy cerca.'
-              : 'Combina urgencia, dificultad y tiempo necesario.'
+        ...item,
+        priority: clamp(Math.round(score), 1, 10)
       };
     })
     .sort((a, b) => b.priority - a.priority);
 
-  const sessions = priorities.slice(0, 7).map((p, index) => ({
-    taskId: p.taskId,
+  const sessions = priorities.slice(0, 7).map((item, index) => ({
+    targetType: item.targetType,
+    targetId: item.targetId,
     dayOffset: index,
-    minutes: Math.min(
-      60,
-      tasks.find(t => t.id === p.taskId)?.minutes || 30
-    ),
-    reason: p.reason
+    minutes: Math.min(60, item.minutes),
+    reason:
+      item.targetType === 'exam'
+        ? `Preparació de l'examen de ${item.subject}.`
+        : 'Combina urgència, dificultat i temps necessari.'
   }));
 
   return {
     summary:
-      'Plan basado en fechas, dificultad, esfuerzo y exámenes próximos.',
-    priorities,
+      'Pla basat en dates, dificultat, esforç, tasques i exàmens pròxims.',
+    priorities: priorities.map(item => ({
+      targetType: item.targetType,
+      targetId: item.targetId,
+      priority: item.priority,
+      reason:
+        item.targetType === 'exam'
+          ? `L'examen de ${item.subject} és pròxim.`
+          : 'Combina urgència, dificultat i temps necessari.'
+    })),
     sessions,
     mode: 'demo'
   };
@@ -63,12 +98,17 @@ const schema = {
     summary: {
       type: 'string'
     },
+
     priorities: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
-          taskId: {
+          targetType: {
+            type: 'string',
+            enum: ['task', 'exam']
+          },
+          targetId: {
             type: 'string'
           },
           priority: {
@@ -78,15 +118,25 @@ const schema = {
             type: 'string'
           }
         },
-        required: ['taskId', 'priority', 'reason']
+        required: [
+          'targetType',
+          'targetId',
+          'priority',
+          'reason'
+        ]
       }
     },
+
     sessions: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
-          taskId: {
+          targetType: {
+            type: 'string',
+            enum: ['task', 'exam']
+          },
+          targetId: {
             type: 'string'
           },
           dayOffset: {
@@ -99,44 +149,77 @@ const schema = {
             type: 'string'
           }
         },
-        required: ['taskId', 'dayOffset', 'minutes', 'reason']
+        required: [
+          'targetType',
+          'targetId',
+          'dayOffset',
+          'minutes',
+          'reason'
+        ]
       }
     }
   },
-  required: ['summary', 'priorities', 'sessions']
+
+  required: [
+    'summary',
+    'priorities',
+    'sessions'
+  ]
 };
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({
-      error: 'Método no permitido'
+      error: 'Mètode no permès'
     });
   }
 
   try {
-    const { tasks = [], exams = [] } = req.body || {};
+    const {
+      tasks = [],
+      exams = []
+    } = req.body || {};
 
     if (!aiConfigured) {
-      return res.status(200).json(demoPlan(tasks, exams));
+      return res.status(200).json(
+        demoPlan(tasks, exams)
+      );
     }
 
     const data = await openAI(
-      JSON.stringify({ tasks, exams }),
-      `Eres un asistente de organización académica para estudiantes de Bachillerato.
+      JSON.stringify({
+        tasks,
+        exams
+      }),
 
-NO hagas deberes, ejercicios ni exámenes.
-NO des respuestas para copiar.
+      `Ets un assistent d'organització acadèmica per a estudiants de Batxillerat.
 
-Tu función es:
-- Priorizar las tareas.
-- Tener en cuenta las fechas de entrega.
-- Tener en cuenta la dificultad.
-- Tener en cuenta el tiempo necesario.
-- Tener en cuenta los exámenes próximos.
-- Proponer sesiones de estudio realistas.
-- Explicar brevemente por qué recomiendas cada tarea.
+La teva funció és crear un pla d'estudi.
 
-Usa únicamente los datos proporcionados por StudyWise.`,
+Pots planificar tant:
+- tasques,
+- com exàmens.
+
+IMPORTANT:
+- Una sessió pot estar relacionada amb una tasca o amb un examen.
+- Si és una tasca, utilitza targetType="task".
+- Si és un examen, utilitza targetType="exam".
+- targetId HA DE ser exactament l'id de la tasca o examen proporcionat.
+- NO inventis ids.
+- Per a un examen, targetId ha de ser l'id de l'examen.
+- Per a una tasca, targetId ha de ser l'id de la tasca.
+
+Prioritza segons:
+- data d'entrega o data de l'examen,
+- dificultat,
+- temps necessari,
+- proximitat de l'examen.
+
+NO facis deures, exercicis ni exàmens.
+NO donis respostes per copiar.
+
+Utilitza únicament les dades proporcionades per TRIA.`,
+
       {
         type: 'json_schema',
         name: 'study_plan',
@@ -145,12 +228,15 @@ Usa únicamente los datos proporcionados por StudyWise.`,
       }
     );
 
-    const result = JSON.parse(outputText(data));
+    const result = JSON.parse(
+      outputText(data)
+    );
 
     return res.status(200).json({
       ...result,
       mode: 'ai'
     });
+
   } catch (e) {
     return res.status(500).json({
       error: e.message
