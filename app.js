@@ -1077,10 +1077,19 @@ function plannerView() {
                   ${
                     sessions.map(s => {
 
-                      const task =
-                        state.tasks.find(
-                          t => t.id === s.taskId
-                        );
+const task =
+  s.targetType === 'task'
+    ? state.tasks.find(
+        t => String(t.id) === String(s.targetId)
+      )
+    : null;
+
+const exam =
+  s.targetType === 'exam'
+    ? state.exams.find(
+        e => String(e.id) === String(s.targetId)
+      )
+    : null;
 
                       return `
                         <div class="calendar-item ai-item">
@@ -1090,11 +1099,13 @@ function plannerView() {
                           </span>
 
                           <strong>
-  ${esc(
-    task?.title
-      ? `Estudi: ${task.title}`
+${esc(
+  task?.title
+    ? `Estudi: ${task.title}`
+    : exam?.subject
+      ? `Estudi: ${exam.subject}`
       : 'Sessió'
-  )}
+)}
 </strong>
 
                           <small>
@@ -2212,48 +2223,29 @@ async function generatePlan() {
 
     }
 
-const pendingTasks = state.tasks.filter(
-  task => task.status !== 'completed'
-);
-
-const usedTaskIds = new Set();
-
 if (Array.isArray(data.sessions)) {
-  data.sessions = data.sessions.map(session => {
-    let task = state.tasks.find(
-      t => String(t.id) === String(session.taskId)
-    );
-
-    // Si la IA ha devuelto un taskId que no existe,
-    // buscamos una tarea con el mismo tiempo.
-    if (!task) {
-      task = pendingTasks.find(
-        t =>
-          !usedTaskIds.has(t.id) &&
-          Number(t.minutes || 30) === Number(session.minutes || 30)
-      );
+  data.sessions = data.sessions.filter(session => {
+    if (
+      session.targetType === 'task' &&
+      !state.tasks.some(
+        task => String(task.id) === String(session.targetId)
+      )
+    ) {
+      return false;
     }
 
-    // Último recurso: asignar la siguiente tarea pendiente.
-    if (!task) {
-      task = pendingTasks.find(
-        t => !usedTaskIds.has(t.id)
-      );
+    if (
+      session.targetType === 'exam' &&
+      !state.exams.some(
+        exam => String(exam.id) === String(session.targetId)
+      )
+    ) {
+      return false;
     }
 
-    if (task) {
-      usedTaskIds.add(task.id);
-
-      return {
-        ...session,
-        taskId: task.id
-      };
-    }
-
-    return session;
+    return true;
   });
 }
-
 state.plan = data;
 saveState();
 alert('Pla actualitzat correctament.');
