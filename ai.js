@@ -1,6 +1,6 @@
 const apiKey = process.env.GEMINI_API_KEY || '';
 
-const model = 'gemini-2.5-flash-lite';
+const model = 'gemini-3.5-flash-lite';
 
 export const aiConfigured = Boolean(apiKey);
 
