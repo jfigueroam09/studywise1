@@ -2212,15 +2212,52 @@ async function generatePlan() {
 
     }
 
-    state.plan = data;
+const pendingTasks = state.tasks.filter(
+  task => task.status !== 'completed'
+);
 
-    saveState();
+const usedTaskIds = new Set();
 
-    alert(
-      'Pla actualitzat correctament.'
+if (Array.isArray(data.sessions)) {
+  data.sessions = data.sessions.map(session => {
+    let task = state.tasks.find(
+      t => String(t.id) === String(session.taskId)
     );
 
-    render();
+    // Si la IA ha devuelto un taskId que no existe,
+    // buscamos una tarea con el mismo tiempo.
+    if (!task) {
+      task = pendingTasks.find(
+        t =>
+          !usedTaskIds.has(t.id) &&
+          Number(t.minutes || 30) === Number(session.minutes || 30)
+      );
+    }
+
+    // Último recurso: asignar la siguiente tarea pendiente.
+    if (!task) {
+      task = pendingTasks.find(
+        t => !usedTaskIds.has(t.id)
+      );
+    }
+
+    if (task) {
+      usedTaskIds.add(task.id);
+
+      return {
+        ...session,
+        taskId: task.id
+      };
+    }
+
+    return session;
+  });
+}
+
+state.plan = data;
+saveState();
+alert('Pla actualitzat correctament.');
+render();
 
   } catch (error) {
 
