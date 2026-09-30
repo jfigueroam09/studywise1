@@ -1836,3 +1836,41 @@ h3 {
 .teacher-quote blockquote {
   color: #a8a8a8 !important;
 }
+
+/* Luz morada horizontal · TRIA */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: #0a0a0a !important;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+
+  left: -10%;
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 120%;
+  height: 180px;
+
+  background: linear-gradient(
+    90deg,
+    rgba(139, 124, 255, 0.14) 0%,
+    rgba(139, 124, 255, 0.09) 20%,
+    rgba(139, 124, 255, 0.045) 42%,
+    rgba(139, 124, 255, 0.015) 65%,
+    transparent 90%
+  );
+
+  filter: blur(45px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.hero::after {
+  display: none !important;
+}
