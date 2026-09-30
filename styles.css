@@ -1379,3 +1379,48 @@ label {
   line-height: 1.65;
   font-style: italic;
 }
+
+/* --- HERO: resplandor central estilo OpenAI --- */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(139, 124, 255, 0.20) 0%,
+      rgba(139, 124, 255, 0.10) 24%,
+      rgba(139, 124, 255, 0.04) 43%,
+      transparent 68%
+    ),
+    #101720;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+
+  background: radial-gradient(
+    circle,
+    rgba(139, 124, 255, 0.12) 0%,
+    rgba(139, 124, 255, 0.05) 35%,
+    transparent 70%
+  );
+
+  filter: blur(35px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.hero > * {
+  position: relative;
+  z-index: 1;
+}
