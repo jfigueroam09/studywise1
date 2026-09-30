@@ -1874,3 +1874,47 @@ h3 {
 .hero::after {
   display: none !important;
 }
+
+/* Luz morada horizontal definitiva de TRIA */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: #0a0a0a !important;
+}
+
+.hero::before {
+  content: "";
+  display: block !important;
+
+  position: absolute;
+  left: -15%;
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 130%;
+  height: 220px;
+
+  background: linear-gradient(
+    90deg,
+    rgba(139, 124, 255, 0.12) 0%,
+    rgba(139, 124, 255, 0.075) 22%,
+    rgba(139, 124, 255, 0.035) 45%,
+    rgba(139, 124, 255, 0.012) 65%,
+    transparent 90%
+  );
+
+  filter: blur(50px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero::after {
+  display: none !important;
+}
+
+.hero > * {
+  position: relative;
+  z-index: 1;
+}
