@@ -580,7 +580,7 @@ function dashboardView() {
 <div class="teacher-quote">
 
   <div class="teacher-quote-label">
-    ✦ Veu del professorat
+    ✦ Veu del professorat sobre l'IA
   </div>
 
   <blockquote>
