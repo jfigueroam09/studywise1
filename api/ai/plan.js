@@ -18,6 +18,7 @@ function demoPlan(tasks = [], exams = []) {
       const difficulty = Number(t.difficulty || 3) * 2;
       const effort = clamp(Number(t.minutes || 30) / 30, 1, 10);
       const exam = boosts.get(t.subject) || 0;
+
       const score =
         urgency * 0.42 +
         difficulty * 0.2 +
@@ -37,9 +38,9 @@ function demoPlan(tasks = [], exams = []) {
     })
     .sort((a, b) => b.priority - a.priority);
 
-  const sessions = priorities.slice(0, 7).map(p => ({
+  const sessions = priorities.slice(0, 7).map((p, index) => ({
     taskId: p.taskId,
-    dayOffset: priorities.indexOf(p),
+    dayOffset: index,
     minutes: Math.min(
       60,
       tasks.find(t => t.id === p.taskId)?.minutes || 30
@@ -49,7 +50,7 @@ function demoPlan(tasks = [], exams = []) {
 
   return {
     summary:
-      'Plan de demostración basado en fechas, dificultad, esfuerzo y exámenes próximos.',
+      'Plan basado en fechas, dificultad, esfuerzo y exámenes próximos.',
     priorities,
     sessions,
     mode: 'demo'
@@ -58,18 +59,24 @@ function demoPlan(tasks = [], exams = []) {
 
 const schema = {
   type: 'object',
-  additionalProperties: false,
   properties: {
-    summary: { type: 'string' },
+    summary: {
+      type: 'string'
+    },
     priorities: {
       type: 'array',
       items: {
         type: 'object',
-        additionalProperties: false,
         properties: {
-          taskId: { type: 'string' },
-          priority: { type: 'integer' },
-          reason: { type: 'string' }
+          taskId: {
+            type: 'string'
+          },
+          priority: {
+            type: 'integer'
+          },
+          reason: {
+            type: 'string'
+          }
         },
         required: ['taskId', 'priority', 'reason']
       }
@@ -78,12 +85,19 @@ const schema = {
       type: 'array',
       items: {
         type: 'object',
-        additionalProperties: false,
         properties: {
-          taskId: { type: 'string' },
-          dayOffset: { type: 'integer' },
-          minutes: { type: 'integer' },
-          reason: { type: 'string' }
+          taskId: {
+            type: 'string'
+          },
+          dayOffset: {
+            type: 'integer'
+          },
+          minutes: {
+            type: 'integer'
+          },
+          reason: {
+            type: 'string'
+          }
         },
         required: ['taskId', 'dayOffset', 'minutes', 'reason']
       }
@@ -94,7 +108,9 @@ const schema = {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método no permitido' });
+    return res.status(405).json({
+      error: 'Método no permitido'
+    });
   }
 
   try {
@@ -106,7 +122,21 @@ export default async function handler(req, res) {
 
     const data = await openAI(
       JSON.stringify({ tasks, exams }),
-      'Eres un asistente de organización académica para Bachillerato. NO hagas deberes ni resuelvas ejercicios. Solo prioriza, organiza y propone estudio. Explica brevemente cada recomendación. Usa únicamente los datos proporcionados.',
+      `Eres un asistente de organización académica para estudiantes de Bachillerato.
+
+NO hagas deberes, ejercicios ni exámenes.
+NO des respuestas para copiar.
+
+Tu función es:
+- Priorizar las tareas.
+- Tener en cuenta las fechas de entrega.
+- Tener en cuenta la dificultad.
+- Tener en cuenta el tiempo necesario.
+- Tener en cuenta los exámenes próximos.
+- Proponer sesiones de estudio realistas.
+- Explicar brevemente por qué recomiendas cada tarea.
+
+Usa únicamente los datos proporcionados por StudyWise.`,
       {
         type: 'json_schema',
         name: 'study_plan',
@@ -115,11 +145,15 @@ export default async function handler(req, res) {
       }
     );
 
+    const result = JSON.parse(outputText(data));
+
     return res.status(200).json({
-      ...JSON.parse(outputText(data)),
+      ...result,
       mode: 'ai'
     });
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    return res.status(500).json({
+      error: e.message
+    });
   }
 }
