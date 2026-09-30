@@ -1799,3 +1799,23 @@ h3 {
 .hero::after {
   display: none !important;
 }
+
+/* Luz sutil y difusa del hero */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse 90% 100% at 50% 45%,
+      rgba(255, 255, 255, 0.018) 0%,
+      rgba(255, 255, 255, 0.008) 45%,
+      transparent 75%
+    ),
+    #0a0a0a !important;
+}
+
+.hero::before,
+.hero::after {
+  display: none !important;
+}
