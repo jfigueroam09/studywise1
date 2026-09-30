@@ -8,7 +8,14 @@ const nav=[['dashboard','Tauler','layout-dashboard'],['tasks','Tasques','list-to
 
 function icon(n){const m={sparkles:'✦',plus:'＋','layout-dashboard':'⌂','list-todo':'☷','graduation-cap':'🎓','calendar-days':'▦','message-circle':'◌','check-circle-2':'✓','settings-2':'⚙','alert-triangle':'⚠','clock-3':'◷','chevron-right':'›','book-open':'▤',circle:'○',pencil:'✎','trash-2':'⌫',x:'×',download:'⇩'};return `<span class="ico">${m[n]||'•'}</span>`} function title(){return {dashboard:'Bon dia 👋',tasks:'Les meves tasques',exams:'Exàmens',planner:'Pla setmanal',chat:'Parla amb la IA',progress:'El meu progrés',settings:'Avaluació i ajustos'}[view]}
 
-function layout(){return `<div class="app"><aside><div class="brand"><div class="logo">${icon('sparkles')}</div><div><span>TRIA</span><small class="creator">Fet per Freddy Figueroa</small></div></div><nav>${nav.map(x=>`<button class="${view===x[0]?'active':''}" data-nav="${x[0]}">${icon(x[2])}<span>${x[1]}</span></button>`).join('')}</nav><div class="side-note">${icon('sparkles')}<b>La IA t'organitza,<br>tu fas la feina.</b><span>Fet per al teu TdR</span></div></aside><main class="main"><header><div><p class="eyebrow">TRIA · MVP</p><h1>${title()}</h1></div><button class="primary" data-new-task>${icon('plus')} Nova tasca</button></header><div id="content"></div></main>${modalHtml()}</div>`}
+<div class="brand">
+  <div class="logo">${icon('sparkles')}</div>
+  <div class="brand-text">
+    <span>TRIA</span>
+    <small class="creator">Fet per Freddy Figueroa</small>
+  </div>
+  <img class="school-logo" src="/logo-institut.png" alt="Logo de l'institut">
+</div>
 
 function stats(){let pending=data.tasks.filter(t=>t.status!=='completed').length,done=data.tasks.filter(t=>t.status==='completed').length,urgent=data.tasks.filter(t=>t.status!=='completed'&&days(t.dueDate)<=2).length,mins=data.tasks.filter(t=>t.status==='completed').reduce((s,t)=>s+t.minutes,0);return `<section class="stats">${stat('list-todo',pending,'tasques pendents',`${done} completades`)}${stat('alert-triangle',urgent,'urgents','lliuraments propers')}${stat('graduation-cap',data.exams.length,'exàmens',data.exams[0]?`Pròxim: ${esc(data.exams[0].subject)}`:'Sense exàmens')}${stat('clock-3',`${Math.round(mins/6)/10} h`,'estudi completat','segons les teves tasques')}</section>`} function stat(i,v,l,s){return `<div class="stat"><div class="stat-icon">${icon(i)}</div><div><b>${v}</b><span>${l}</span><small>${s}</small></div></div>`}
 
