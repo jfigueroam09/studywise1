@@ -1785,3 +1785,17 @@ h3 {
   background: #ffffff;
   color: #050505;
 }
+
+/* Quitar completamente la luz/forma del fondo del hero */
+
+.hero {
+  background: #0a0a0a !important;
+}
+
+.hero::before {
+  display: none !important;
+}
+
+.hero::after {
+  display: none !important;
+}
