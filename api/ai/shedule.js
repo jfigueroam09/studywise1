@@ -10,8 +10,12 @@ const schema = {
       items: {
         type: 'object',
         properties: {
-          title: { type: 'string' },
-          subject: { type: 'string' },
+          title: {
+            type: 'string'
+          },
+          subject: {
+            type: 'string'
+          },
           day: {
             type: 'string',
             enum: [
@@ -22,8 +26,12 @@ const schema = {
               'friday'
             ]
           },
-          startTime: { type: 'string' },
-          endTime: { type: 'string' },
+          startTime: {
+            type: 'string'
+          },
+          endTime: {
+            type: 'string'
+          },
           type: {
             type: 'string',
             enum: [
@@ -33,7 +41,9 @@ const schema = {
               'personal'
             ]
           },
-          notes: { type: 'string' }
+          notes: {
+            type: 'string'
+          }
         },
         required: [
           'title',
@@ -49,6 +59,7 @@ const schema = {
   },
   required: ['events']
 };
+
 
 export default async function handler(req, res) {
 
@@ -70,10 +81,12 @@ export default async function handler(req, res) {
       });
     }
 
+
     const {
       image = '',
       mimeType = 'image/jpeg'
     } = req.body || {};
+
 
     if (!image) {
       return res.status(400).json({
@@ -81,58 +94,80 @@ export default async function handler(req, res) {
       });
     }
 
+
     const body = {
       contents: [
         {
           role: 'user',
+
           parts: [
+
             {
               inlineData: {
                 mimeType,
                 data: image
               }
             },
+
             {
-              text: `Analiza esta fotografía de un horario escolar.
+              text: `
+Analiza esta fotografía de un horario escolar.
 
-Tu trabajo es convertir el horario visual en una lista estructurada de clases.
+Convierte únicamente la información visible del horario en una lista estructurada de clases.
 
-Reglas:
-- Lee únicamente lo que aparezca en la imagen.
+REGLAS IMPORTANTES:
+
+- Lee únicamente lo que aparece en la imagen.
+- No inventes asignaturas.
+- No inventes horas.
+- No inventes profesores.
+- No inventes aulas.
 - Identifica los días de lunes a viernes.
-- Identifica las horas de inicio y finalización.
-- Identifica la asignatura o actividad.
-- Si aparece un profesor, aula o información adicional útil, puedes ponerla en notes.
-- No inventes clases que no se vean.
-- Si una celda está vacía, no la conviertas en una actividad.
-- Si una asignatura ocupa varias horas consecutivas, crea una sola actividad con la hora inicial y final.
-- Usa siempre horas en formato HH:MM.
-- Usa estos valores para day:
-  monday, tuesday, wednesday, thursday, friday.
-- Para una clase normal usa type="class".
-- Responde exclusivamente con el JSON solicitado.`
+- Identifica la hora inicial y final de cada actividad.
+- Identifica el nombre de la asignatura.
+- Si aparece un profesor, aula u otra información útil, puedes ponerla en notes.
+- Si una celda está vacía, no crees ninguna actividad.
+- Si una asignatura ocupa varias horas consecutivas, crea una sola actividad.
+- Usa SIEMPRE el formato HH:MM para las horas.
+- Usa exactamente estos valores para day:
+  monday
+  tuesday
+  wednesday
+  thursday
+  friday
+- Una clase normal debe tener type="class".
+- Responde exclusivamente con el JSON solicitado.
+              `.trim()
             }
+
           ]
         }
       ],
+
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: schema
       }
     };
 
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
+
         headers: {
           'Content-Type': 'application/json'
         },
+
         body: JSON.stringify(body)
       }
     );
 
-    const data = await response.json();
+
+    const data =
+      await response.json();
+
 
     if (!response.ok) {
       throw new Error(
@@ -141,10 +176,12 @@ Reglas:
       );
     }
 
+
     const text =
       data?.candidates?.[0]?.content?.parts
         ?.map(part => part.text || '')
         .join('') || '';
+
 
     if (!text) {
       throw new Error(
@@ -152,37 +189,64 @@ Reglas:
       );
     }
 
-    const result = JSON.parse(text);
+
+    const result =
+      JSON.parse(text);
+
 
     function normalizeTime(value) {
-      const raw = String(value ?? '').trim();
+
+      const raw =
+        String(value ?? '').trim();
+
 
       if (!raw) {
         return '';
       }
 
-      let match = raw.match(
-        /^(?:[01]?\d|2[0-3]):([0-5]\d)$/
-      );
+
+      let match =
+        raw.match(
+          /^(?:[01]?\d|2[0-3]):([0-5]\d)$/
+        );
+
 
       if (match) {
-        const [hour, minute] = raw.split(':');
 
-        return `${hour.padStart(2, '0')}:${minute}`;
+        const [
+          hour,
+          minute
+        ] =
+          raw.split(':');
+
+
+        return (
+          `${hour.padStart(2, '0')}:${minute}`
+        );
       }
 
-      const compact = raw
-        .toLowerCase()
-        .replace(/\s+/g, '')
-        .replace(/[.,h]/g, ':');
 
-      match = compact.match(
-        /^(\d{1,2}):(\d{2})$/
-      );
+      const compact =
+        raw
+          .toLowerCase()
+          .replace(/\s+/g, '')
+          .replace(/[.,h]/g, ':');
+
+
+      match =
+        compact.match(
+          /^(\d{1,2}):(\d{2})$/
+        );
+
 
       if (match) {
-        const hour = Number(match[1]);
-        const minute = Number(match[2]);
+
+        const hour =
+          Number(match[1]);
+
+        const minute =
+          Number(match[2]);
+
 
         if (
           hour >= 0 &&
@@ -190,74 +254,128 @@ Reglas:
           minute >= 0 &&
           minute <= 59
         ) {
-          return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+
+          return (
+            `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+          );
         }
       }
+
 
       return '';
     }
 
-    const allowedDays = new Set([
-      'monday',
-      'tuesday',
-      'wednesday',
-      'thursday',
-      'friday'
-    ]);
 
-    const events = Array.isArray(result.events)
-      ? result.events
-          .map(event => ({
-            title: String(
-              event?.title || ''
-            ).trim(),
+    const allowedDays =
+      new Set([
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday'
+      ]);
 
-            subject: String(
-              event?.subject || ''
-            ).trim(),
 
-            day: allowedDays.has(event?.day)
-              ? event.day
-              : '',
+    const allowedTypes =
+      new Set([
+        'class',
+        'exam',
+        'study',
+        'personal'
+      ]);
 
-            startTime: normalizeTime(
-              event?.startTime
-            ),
 
-            endTime: normalizeTime(
-              event?.endTime
-            ),
+    const events =
+      Array.isArray(result.events)
 
-            type: [
-              'class',
-              'exam',
-              'study',
-              'personal'
-            ].includes(event?.type)
-              ? event.type
-              : 'class',
+        ? result.events
+            .map(event => ({
 
-            notes: String(
-              event?.notes || ''
-            ).trim()
-          }))
-          .filter(event =>
-            event.title &&
-            event.day &&
-            event.startTime &&
-            event.endTime &&
-            event.endTime > event.startTime
-          )
-      : [];
+              title:
+                String(
+                  event?.title || ''
+                ).trim(),
+
+              subject:
+                String(
+                  event?.subject || ''
+                ).trim(),
+
+              day:
+                allowedDays.has(event?.day)
+                  ? event.day
+                  : '',
+
+              startTime:
+                normalizeTime(
+                  event?.startTime
+                ),
+
+              endTime:
+                normalizeTime(
+                  event?.endTime
+                ),
+
+              type:
+                allowedTypes.has(event?.type)
+                  ? event.type
+                  : 'class',
+
+              notes:
+                String(
+                  event?.notes || ''
+                ).trim()
+
+            }))
+
+            .filter(event => {
+
+              if (!event.title) {
+                return false;
+              }
+
+              if (!event.day) {
+                return false;
+              }
+
+              if (!event.startTime) {
+                return false;
+              }
+
+              if (!event.endTime) {
+                return false;
+              }
+
+              if (
+                event.endTime <=
+                event.startTime
+              ) {
+                return false;
+              }
+
+              return true;
+            })
+
+        : [];
+
 
     return res.status(200).json({
       events
     });
 
+
   } catch (error) {
 
+    console.error(
+      'TRIA schedule error:',
+      error
+    );
+
+
     return res.status(500).json({
-      error: error.message
+      error:
+        error?.message ||
+        'No se pudo analizar el horario.'
     });
   }
 }
