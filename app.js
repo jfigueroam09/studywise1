@@ -2041,6 +2041,7 @@ const teacherQuotes = [
   'Un bon pla deixa espai per estudiar i també per descansar.'
 ];
 
+let teacherQuoteIndex = 0;
 
 function tomorrowISO() {
 
