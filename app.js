@@ -1797,6 +1797,74 @@ function scheduleView() {
   `;
 }
 
+function normalizeScheduleTime(value, fallback = '') {
+
+  const raw = String(value ?? '').trim();
+
+  if (!raw) {
+    return fallback;
+  }
+
+  // HH:MM
+  let match = raw.match(/^(?:[01]?\d|2[0-3]):([0-5]\d)$/);
+  if (match) {
+    const [hour, minute] = raw.split(':');
+    return `${hour.padStart(2, '0')}:${minute}`;
+  }
+
+  // H.MM / HH.MM / HhMM / HHhMM
+  const compact = raw
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[.,h]/g, ':');
+
+  match = compact.match(/^(\d{1,2}):(\d{2})$/);
+  if (match) {
+    const hour = Number(match[1]);
+    const minute = Number(match[2]);
+
+    if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+      return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    }
+  }
+
+  // H / HH en punt / dos punts sense minuts
+  match = raw.match(/^(\d{1,2})$/);
+  if (match) {
+    const hour = Number(match[1]);
+
+    if (hour >= 0 && hour <= 23) {
+      return `${String(hour).padStart(2, '0')}:00`;
+    }
+  }
+
+  return fallback;
+}
+
+function normalizeScheduleEvent(event, index = 0) {
+
+  const startTime =
+    normalizeScheduleTime(event?.startTime, '');
+
+  const endTime =
+    normalizeScheduleTime(event?.endTime, '');
+
+  return {
+    id: event?.id || uid(`schedule-${index}`),
+    title: String(event?.title || '').trim(),
+    subject: String(event?.subject || '').trim(),
+    type: ['class', 'exam', 'study', 'personal'].includes(event?.type)
+      ? event.type
+      : 'class',
+    day: scheduleDays.some(([value]) => value === event?.day)
+      ? event.day
+      : 'monday',
+    startTime,
+    endTime,
+    notes: String(event?.notes || '').trim()
+  };
+}
+
 function scheduleTypeLabel(type) {
 
   const labels = {
@@ -1964,8 +2032,8 @@ function saveScheduleEventFromForm(event) {
     subject: String(data.get('subject') || '').trim(),
     type: String(data.get('type') || 'class'),
     day: String(data.get('day') || 'monday'),
-    startTime,
-    endTime,
+    startTime: normalizeScheduleTime(startTime, ''),
+    endTime: normalizeScheduleTime(endTime, ''),
     notes: String(data.get('notes') || '').trim()
   };
 
@@ -2008,16 +2076,9 @@ function deleteScheduleEvent(id) {
 
 function openScheduleImportModal(events, sourceName = '') {
 
-  pendingScheduleEvents = events.map((event, index) => ({
-    id: event.id || uid(`scan-${index}`),
-    title: event.title || '',
-    subject: event.subject || '',
-    type: event.type || 'class',
-    day: event.day || 'monday',
-    startTime: event.startTime || '08:00',
-    endTime: event.endTime || '09:00',
-    notes: event.notes || ''
-  }));
+  pendingScheduleEvents = events
+    .map((event, index) => normalizeScheduleEvent(event, index))
+    .filter(event => event.title && event.startTime && event.endTime);
 
   const modal =
     document.querySelector('#modal');
