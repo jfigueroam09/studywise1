@@ -4794,6 +4794,51 @@ function openScheduleReview() {
     )
   );
 
+     const saveButton =
+    document.querySelector(
+      '[data-action="save-schedule-review"]'
+    );
+
+  if (saveButton) {
+    saveButton.addEventListener(
+      'click',
+      saveScheduleReview
+    );
+  }
+
+
+  document
+    .querySelectorAll(
+      '[data-action="remove-review-event"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () => {
+            removeReviewEvent(
+              button.dataset.index
+            );
+          }
+        );
+
+      }
+    );
+
+
+  const closeButton =
+    document.querySelector(
+      '[data-action="close-modal"]'
+    );
+
+  if (closeButton) {
+    closeButton.addEventListener(
+      'click',
+      closeModal
+    );
+  }
+   
 }
 
 
