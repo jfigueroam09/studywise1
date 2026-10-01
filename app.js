@@ -7213,11 +7213,6 @@ function bindPageEvents() {
 }
 
 
-/* =========================================================
-   INICI
-   ========================================================= */
-
-initAuth();
 function teacherQuoteView() {
   const quote = teacherQuotes[teacherQuoteIndex];
 
@@ -7284,3 +7279,9 @@ function teacherQuoteView() {
     </section>
   `;
 }
+
+/* =========================================================
+   INICI
+   ========================================================= */
+
+initAuth();
