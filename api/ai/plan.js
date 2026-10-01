@@ -30,9 +30,9 @@ function demoPlan(tasks = [], exams = []) {
         priority: clamp(Math.round(score), 1, 10),
         reason:
           exam > 4
-            ? `Tienes un examen prÃ³ximo de ${t.subject}.`
+            ? `Tienes un examen próximo de ${t.subject}.`
             : days <= 2
-              ? 'La fecha de entrega estÃ¡ muy cerca.'
+              ? 'La fecha de entrega está muy cerca.'
               : 'Combina urgencia, dificultad y tiempo necesario.'
       };
     })
@@ -50,7 +50,7 @@ function demoPlan(tasks = [], exams = []) {
 
   return {
     summary:
-      'Plan basado en fechas, dificultad, esfuerzo y exÃ¡menes prÃ³ximos.',
+      'Plan basado en fechas, dificultad, esfuerzo y exámenes próximos.',
     priorities,
     sessions,
     mode: 'demo'
@@ -109,7 +109,7 @@ const schema = {
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({
-      error: 'MÃ©todo no permitido'
+      error: 'Método no permitido'
     });
   }
 
@@ -122,26 +122,26 @@ export default async function handler(req, res) {
 
     const data = await openAI(
       JSON.stringify({ tasks, exams, scheduleEvents }),
-      `Eres un asistente de organizaciÃ³n acadÃ©mica para estudiantes de Bachillerato.
+      `Eres un asistente de organización académica para estudiantes de Bachillerato.
 
-NO hagas deberes, ejercicios ni exÃ¡menes.
+NO hagas deberes, ejercicios ni exámenes.
 NO des respuestas para copiar.
 
-Tu funciÃ³n es:
+Tu función es:
 - Priorizar las tareas.
 - Tener en cuenta las fechas de entrega.
 - Tener en cuenta la dificultad.
 - Tener en cuenta el tiempo necesario.
-- Tener en cuenta los exÃ¡menes prÃ³ximos.
+- Tener en cuenta los exámenes próximos.
 - Proponer sesiones de estudio realistas.
-- Explicar brevemente por quÃ© recomiendas cada tarea.
+- Explicar brevemente por qué recomiendas cada tarea.
 
-Usa Ãºnicamente los datos proporcionados por TRIA.
+Usa únicamente los datos proporcionados por TRIA.
 
 El horario semanal representa horas ocupadas por clases y otras actividades.
 No propongas sesiones de estudio que coincidan con esas horas.
-Si es posible, coloca las sesiones en huecos razonables despuÃ©s de las clases
-y antes de las fechas de entrega o exÃ¡menes.`,
+Si es posible, coloca las sesiones en huecos razonables después de las clases
+y antes de las fechas de entrega o exámenes.`,
       {
         type: 'json_schema',
         name: 'study_plan',
