@@ -1,2333 +1,2791 @@
-:root {
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+const KEY = 'tria';
 
-  color: #f1f5f9;
-  background: #0b0f14;
+const defaultState = {
+  tasks: [],
+  exams: [],
+  plan: null,
+  chat: [],
+  settings: {
+    aiEnabled: true
+  }
+};
 
-  --bg: #0b0f14;
-  --sidebar: #10161e;
-  --card: #121923;
-  --card-hover: #17212d;
-  --line: #24303d;
+let state = loadState();
+let currentPage = 'dashboard';
+let modalMode = null;
+let editingId = null;
 
-  --text: #f1f5f9;
-  --muted: #94a3b8;
-  --muted-2: #64748b;
+function loadState() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return structuredClone(defaultState);
 
-  --accent: #8b7cff;
-  --accent-light: #a99fff;
-  --accent-dark: #211e3b;
-
-  --success: #4ade80;
-  --danger: #ff6b6b;
-  --warning: #fbbf24;
-
-  --radius: 14px;
-  --shadow: 0 12px 40px rgba(0, 0, 0, .35);
+    return {
+      ...structuredClone(defaultState),
+      ...JSON.parse(raw)
+    };
+  } catch {
+    return structuredClone(defaultState);
+  }
 }
 
-* {
-  box-sizing: border-box;
+function saveState() {
+  localStorage.setItem(KEY, JSON.stringify(state));
 }
 
-html {
-  min-height: 100%;
-  background: #050505;
+function uid(prefix = 'id') {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-body {
-  min-height: 100vh;
-  margin: 0;
-  background: #050505;
-  color: var(--text);
+function esc(value = '') {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
+function chatMarkdown(text) {
+  let html = esc(text || '');
+
+  html = html
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^\s*[-â€¢] (.+)$/gm, '<li>$1</li>')
+    .replace(/^\s*(\d+)\.\s+(.+)$/gm, '<li>$2</li>')
+    .replace(/\n/g, '<br>');
+
+  html = html.replace(
+    /(<li>.*?<\/li>)(?:<br>|$)/g,
+    '$1'
+  );
+
+  return html;
+}
+function todayISO() {
+  const d = new Date();
+  const offset = d.getTimezoneOffset();
+
+  return new Date(d.getTime() - offset * 60000)
+    .toISOString()
+    .slice(0, 10);
 }
 
-button {
-  cursor: pointer;
+function formatDate(value) {
+  if (!value) return 'â€”';
+
+  const d = new Date(`${value}T12:00:00`);
+
+  if (Number.isNaN(d.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat('ca-ES', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  }).format(d);
 }
 
-button:disabled {
-  cursor: not-allowed;
-  opacity: .55;
+function daysUntil(value) {
+  if (!value) return 999;
+
+  const target = new Date(`${value}T23:59:59`);
+
+  return Math.ceil(
+    (target - Date.now()) / 86400000
+  );
 }
 
-.hidden {
-  display: none !important;
+function statusLabel(status) {
+  return {
+    pending: 'Pendent',
+    inprogress: 'En curs',
+    completed: 'Completada'
+  }[status] || 'Pendent';
 }
 
-.icon {
-  display: block;
-  flex: 0 0 auto;
+function difficultyLabel(value) {
+  return {
+    1: 'Baixa',
+    2: 'Baixa',
+    3: 'Mitjana',
+    4: 'Alta',
+    5: 'Alta'
+  }[Number(value)] || 'Mitjana';
 }
 
-.muted {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.55;
+function icon(name, size = 18) {
+  const paths = {
+    dashboard:
+      '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+
+    tasks:
+      '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+
+    exams:
+      '<path d="M4 4h16v16H4z"/><path d="M8 2v4M16 2v4M8 11h8M8 15h5"/>',
+
+    planner:
+      '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 9h18"/>',
+
+    chat:
+      '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.8 9.8 0 0 1-4-.8L3 21l1.8-4A8.2 8.2 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z"/>',
+
+    progress:
+      '<path d="M3 3v18h18"/><path d="m7 16 4-5 3 3 5-7"/>',
+
+    settings:
+      '<path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2 2-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V20h-3v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1-2-2 .1-.1A1.7 1.7 0 0 0 7.2 15a1.7 1.7 0 0 0-1.5-1H5v-3h.7a1.7 1.7 0 0 0 1.5-1A1.7 1.7 0 0 0 7 8.1l-.1-.1 2-2 .1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5V5h3v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 2 2-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.7v3h-.7a1.7 1.7 0 0 0-1.5 1Z"/>',
+
+    plus:
+      '<path d="M12 5v14M5 12h14"/>',
+
+    edit:
+      '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/>',
+
+    trash:
+      '<path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/>',
+
+    check:
+      '<path d="m5 12 4 4L19 6"/>',
+
+    sparkles:
+      '<path d="m12 3-1.2 5.8L5 10l5.8 1.2L12 17l1.2-5.8L19 10l-5.8-1.2Z"/><path d="m19 16-.6 2.4L16 19l2.4.6L19 22l.6-2.4L22 19l-2.4-.6Z"/>',
+
+    calendar:
+      '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 9h18"/>',
+
+    clock:
+      '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+
+    arrow:
+      '<path d="M5 12h14M13 6l6 6-6 6"/>',
+
+    close:
+      '<path d="m6 6 12 12M18 6 6 18"/>',
+
+    refresh:
+      '<path d="M20 11a8.1 8.1 0 0 0-14.7-4L3 10"/><path d="M3 4v6h6"/><path d="M4 13a8.1 8.1 0 0 0 14.7 4L21 14"/><path d="M21 20v-6h-6"/>',
+
+    download:
+      '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>'
+  };
+
+  return `
+    <svg
+      class="icon"
+      width="${size}"
+      height="${size}"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      ${paths[name] || paths.sparkles}
+    </svg>
+  `;
 }
 
+function navItems() {
+  return [
+    ['dashboard', 'Tauler', 'dashboard'],
+    ['tasks', 'Tasques', 'tasks'],
+    ['exams', 'ExÃ mens', 'exams'],
+    ['planner', 'Planificador', 'planner'],
+    ['chat', "IA d'estudi", 'chat'],
+    ['progress', 'ProgrÃ©s', 'progress'],
+    ['settings', 'AvaluaciÃ³', 'settings']
+  ];
+}
+
+function pageTitle() {
+  return (
+    navItems().find(item => item[0] === currentPage)?.[1] ||
+    'Tauler'
+  );
+}
+
+function layout() {
+  return `
+    <div class="app-shell">
+
+      <aside class="sidebar">
+
+        <div class="brand">
+
+          <div class="brand-mark">
+            ${icon('sparkles', 22)}
+          </div>
+
+          <div class="brand-copy">
+            <strong>TRIA</strong>
+            <span>Fet per Freddy Figueroa</span>
+          </div>
+
+          <img
+            class="school-logo"
+            src="/logo-institut.png"
+            alt="Logo de l'institut"
+          >
+
+        </div>
+
+        <nav class="nav">
+
+          ${navItems().map(([id, label, ico]) => `
+            <button
+              class="nav-item ${currentPage === id ? 'active' : ''}"
+              data-page="${id}"
+            >
+              ${icon(ico)}
+              <span>${label}</span>
+            </button>
+          `).join('')}
+
+        </nav>
+
+        <div class="sidebar-bottom">
+
+          <div class="ai-status">
+
+            <span class="status-dot"></span>
+
+            <div>
+              <strong>IA preparada</strong>
+              <small>Gemini connectat</small>
+            </div>
+
+          </div>
+
+        </div>
+
+      </aside>
+
+      <main class="main">
+
+        <header class="topbar">
+
+          <div>
+            <p class="eyebrow">OrganitzaciÃ³ acadÃ¨mica</p>
+            <h1>${pageTitle()}</h1>
+          </div>
+
+          <div class="top-actions">
+
+            ${
+              currentPage === 'tasks'
+                ? `
+                  <button
+                    class="btn primary"
+                    data-action="new-task"
+                  >
+                    ${icon('plus', 17)}
+                    Nova tasca
+                  </button>
+                `
+                : ''
+            }
+
+            ${
+              currentPage === 'exams'
+                ? `
+                  <button
+                    class="btn primary"
+                    data-action="new-exam"
+                  >
+                    ${icon('plus', 17)}
+                    Nou examen
+                  </button>
+                `
+                : ''
+            }
+
+          </div>
+
+        </header>
+
+        <section id="content"></section>
+
+      </main>
+
+      ${buildModalHtml()}
+
+    </div>
+  `;
+}
+
+function buildModalHtml() {
+  return `
+    <div
+      id="modal"
+      class="modal-backdrop hidden"
+    >
+
+      <div class="modal">
+
+        <div class="modal-head">
+
+          <div>
+            <p class="eyebrow" id="modal-eyebrow">
+              TRIA
+            </p>
+
+            <h2 id="modal-title">
+              Nova tasca
+            </h2>
+          </div>
+
+          <button
+            class="icon-btn"
+            data-action="close-modal"
+            aria-label="Tancar"
+          >
+            ${icon('close')}
+          </button>
+
+        </div>
+
+        <form id="modal-form"></form>
+
+      </div>
+
+    </div>
+  `;
+}
+
+function statCard(label, value, note, ico) {
+  return `
+    <div class="stat-card">
+
+      <div class="stat-icon">
+        ${icon(ico, 20)}
+      </div>
+
+      <div>
+
+        <span>${label}</span>
+
+        <strong>${value}</strong>
+
+        <small>${note}</small>
+
+      </div>
+
+    </div>
+  `;
+}
+
+function taskCard(task) {
+  const days = daysUntil(task.dueDate);
+  const urgent =
+    task.status !== 'completed' &&
+    days <= 2;
+
+  return `
+    <article class="task-card">
+
+      <div class="task-main">
+
+        <div
+          class="task-check ${task.status === 'completed' ? 'done' : ''}"
+          data-action="toggle-task"
+          data-id="${task.id}"
+        >
+          ${
+            task.status === 'completed'
+              ? icon('check', 16)
+              : ''
+          }
+        </div>
+
+        <div class="task-info">
+
+          <div class="task-title-row">
+
+            <h3>${esc(task.title)}</h3>
+
+            <span class="badge">
+              ${esc(task.subject || 'General')}
+            </span>
+
+          </div>
+
+          <p>
+            ${esc(task.description || 'Sense descripciÃ³')}
+          </p>
+
+          <div class="task-meta">
+
+            <span>
+              ${icon('calendar', 14)}
+              ${formatDate(task.dueDate)}
+            </span>
+
+            <span>
+              ${icon('clock', 14)}
+              ${Number(task.minutes || 30)} min
+            </span>
+
+            <span>
+              Dificultat:
+              ${difficultyLabel(task.difficulty)}
+            </span>
+
+            ${
+              urgent
+                ? '<span class="danger-text">Urgent</span>'
+                : ''
+            }
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="task-actions">
+
+        <span class="status ${task.status}">
+          ${statusLabel(task.status)}
+        </span>
+
+        <button
+          class="icon-btn"
+          data-action="edit-task"
+          data-id="${task.id}"
+          title="Editar"
+        >
+          ${icon('edit', 16)}
+        </button>
+
+        <button
+          class="icon-btn danger"
+          data-action="delete-task"
+          data-id="${task.id}"
+          title="Eliminar"
+        >
+          ${icon('trash', 16)}
+        </button>
+
+      </div>
+
+    </article>
+  `;
+}
+
+function dashboardView() {
+  const pending =
+    state.tasks.filter(
+      t => t.status !== 'completed'
+    );
+
+  const completed =
+    state.tasks.filter(
+      t => t.status === 'completed'
+    );
+
+  const urgent =
+    pending
+      .filter(
+        t => daysUntil(t.dueDate) <= 2
+      )
+      .sort(
+        (a, b) =>
+          a.dueDate.localeCompare(b.dueDate)
+      );
+
+  const upcomingExams =
+    [...state.exams]
+      .sort(
+        (a, b) =>
+          a.date.localeCompare(b.date)
+      )
+      .slice(0, 3);
+
+  const totalMinutes =
+    state.tasks.reduce(
+      (sum, t) =>
+        sum + Number(t.minutes || 0),
+      0
+    );
+
+  const completedMinutes =
+    completed.reduce(
+      (sum, t) =>
+        sum + Number(t.minutes || 0),
+      0
+    );
+
+  const percent =
+    state.tasks.length
+      ? Math.round(
+          (completed.length /
+            state.tasks.length) *
+            100
+        )
+      : 0;
+
+  return `
+    <div class="page">
+
+      <div class="hero">
+
+        <div>
+
+          <p class="eyebrow">
+            Bon dia
+          </p>
+
+          <h2>
+            Organitza el teu estudi amb TRIA.
+          </h2>
+
+          <p>
+            Consulta les tasques, prepara els exÃ mens
+            i deixa que la IA t'ajudi a ordenar
+            les prioritats.
+          </p>
+
+        </div>
+
+        <button
+          class="btn primary"
+          data-action="recalculate"
+        >
+          ${icon('sparkles', 17)}
+          Recalcular amb IA
+        </button>
+
+      </div>
+
+      <div class="stats-grid">
+
+        ${statCard(
+          'Tasques pendents',
+          pending.length,
+          `${completed.length} completades`,
+          'tasks'
+        )}
+
+        ${statCard(
+          'ExÃ mens propers',
+          upcomingExams.length,
+          'SegÃ¼ents dates',
+          'exams'
+        )}
+
+        ${statCard(
+          'ProgrÃ©s',
+          `${percent}%`,
+          `${completedMinutes} / ${totalMinutes || 0} min`,
+          'progress'
+        )}
+
+        ${statCard(
+          'Urgents',
+          urgent.length,
+          'En els prÃ²xims 2 dies',
+          'clock'
+        )}
+
+      </div>
+
+      <div class="two-col">
+
+        <section class="panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <p class="eyebrow">
+                Prioritats
+              </p>
+
+              <h2>
+                QuÃ¨ hauries de fer ara?
+              </h2>
+
+            </div>
+
+            <button
+              class="text-btn"
+              data-page="tasks"
+            >
+              Veure tasques
+              ${icon('arrow', 15)}
+            </button>
+
+          </div>
+
+          <div class="list">
+
+            ${
+              (
+                urgent.length
+                  ? urgent.slice(0, 4)
+                  : pending.slice(0, 4)
+              )
+                .map(taskCard)
+                .join('') ||
+              `
+                <div class="empty">
+                  No tens tasques pendents.
+                  Afegeix-ne una per comenÃ§ar.
+                </div>
+              `
+            }
+
+          </div>
+
+        </section>
+
+        <section class="panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <p class="eyebrow">
+                Calendari acadÃ¨mic
+              </p>
+
+              <h2>
+                PrÃ²xims exÃ mens
+              </h2>
+
+            </div>
+
+            <button
+              class="text-btn"
+              data-page="exams"
+            >
+              Veure exÃ mens
+              ${icon('arrow', 15)}
+            </button>
+
+          </div>
+
+          <div class="exam-list">
+
+            ${
+              upcomingExams.map(exam => `
+                <div class="exam-row">
+
+                  <div class="date-box">
+
+                    <strong>
+                      ${
+                        new Date(
+                          `${exam.date}T12:00:00`
+                        ).getDate()
+                      }
+                    </strong>
+
+                    <span>
+                      ${
+                        new Intl.DateTimeFormat(
+                          'ca-ES',
+                          { month: 'short' }
+                        ).format(
+                          new Date(
+                            `${exam.date}T12:00:00`
+                          )
+                        )
+                      }
+                    </span>
+
+                  </div>
+
+                  <div>
+
+                    <strong>
+                      ${esc(exam.subject)}
+                    </strong>
+
+                    <span>
+                      ${
+                        esc(
+                          exam.syllabus ||
+                          'Sense temari'
+                        )
+                      }
+                    </span>
+
+                  </div>
+
+                  <span class="badge">
+                    ${difficultyLabel(exam.difficulty)}
+                  </span>
+
+                </div>
+              `).join('') ||
+              `
+                <div class="empty">
+                  No hi ha exÃ mens registrats.
+                </div>
+              `
+            }
+
+          </div>
+
+        </section>
+
+      </div>
+
+      <section class="panel">
+
+        <div class="panel-head">
+
+          <div>
+
+            <p class="eyebrow">
+              Pla actual
+            </p>
+
+            <h2>
+              ${
+                state.plan?.summary
+                  ? 'RecomanaciÃ³ de la IA'
+                  : 'Encara no tens un pla generat'
+              }
+            </h2>
+
+          </div>
+
+          <button
+            class="btn secondary"
+            data-action="recalculate"
+          >
+            ${icon('refresh', 16)}
+            Recalcular
+          </button>
+
+        </div>
+
+        <p class="plan-summary">
+          ${
+            esc(
+              state.plan?.summary ||
+              'Afegeix tasques i exÃ mens i prem Â«Recalcular amb IAÂ» per generar una proposta.'
+            )
+          }
+        </p>
+
+      </section>
+
+    </div>
+  `;
+}
+
+function tasksView() {
+  const tasks =
+    [...state.tasks].sort(
+      (a, b) =>
+        a.dueDate.localeCompare(b.dueDate)
+    );
+
+  return `
+    <div class="page">
+
+      <div class="toolbar">
+
+        <div>
+
+          <p class="eyebrow">
+            GestiÃ³
+          </p>
+
+          <h2>
+            Totes les tasques
+          </h2>
+
+        </div>
+
+        <button
+          class="btn primary"
+          data-action="new-task"
+        >
+          ${icon('plus', 17)}
+          Nova tasca
+        </button>
+
+      </div>
+
+      <div class="task-list">
+
+        ${
+          tasks.map(taskCard).join('') ||
+          `
+            <div class="empty large">
+              Encara no tens tasques.
+              Crea la primera amb el botÃ³
+              Â«Nova tascaÂ».
+            </div>
+          `
+        }
+
+      </div>
+
+    </div>
+  `;
+}
+
+function examsView() {
+  const exams =
+    [...state.exams].sort(
+      (a, b) =>
+        a.date.localeCompare(b.date)
+    );
+
+  return `
+    <div class="page">
+
+      <div class="toolbar">
+
+        <div>
+
+          <p class="eyebrow">
+            Calendari
+          </p>
+
+          <h2>
+            ExÃ mens
+          </h2>
+
+        </div>
+
+        <button
+          class="btn primary"
+          data-action="new-exam"
+        >
+          ${icon('plus', 17)}
+          Nou examen
+        </button>
+
+      </div>
+
+      <div class="exam-grid">
+
+        ${
+          exams.map(exam => `
+            <article class="exam-card">
+
+              <div class="exam-card-top">
+
+                <span class="badge">
+                  ${esc(exam.subject)}
+                </span>
+
+                <span class="status pending">
+                  ${formatDate(exam.date)}
+                </span>
+
+              </div>
+
+              <h3>
+                ${esc(exam.subject)}
+              </h3>
+
+              <p>
+                ${
+                  esc(
+                    exam.syllabus ||
+                    'Sense temari definit.'
+                  )
+                }
+              </p>
+
+              <div class="exam-details">
+
+                <span>
+                  Dificultat:
+                  ${difficultyLabel(exam.difficulty)}
+                </span>
+
+                <span>
+                  Temps disponible:
+                  ${Number(exam.availableMinutes || 0)}
+                  min
+                </span>
+
+              </div>
+
+              <div class="card-actions">
+
+                <button
+                  class="btn secondary"
+                  data-action="edit-exam"
+                  data-id="${exam.id}"
+                >
+                  ${icon('edit', 15)}
+                  Editar
+                </button>
+
+                <button
+                  class="btn ghost danger-btn"
+                  data-action="delete-exam"
+                  data-id="${exam.id}"
+                >
+                  ${icon('trash', 15)}
+                  Eliminar
+                </button>
+
+              </div>
+
+            </article>
+          `).join('') ||
+          `
+            <div class="empty large">
+              No hi ha exÃ mens registrats.
+            </div>
+          `
+        }
+
+      </div>
+
+    </div>
+  `;
+}
+
+function plannerView() {
+  const days = [];
+
+  const start = new Date();
+
+  start.setHours(12, 0, 0, 0);
+
+  for (let i = 0; i < 7; i++) {
+
+    const d = new Date(start);
+
+    d.setDate(
+      start.getDate() + i
+    );
+
+    const iso =
+      new Date(
+        d.getTime() -
+        d.getTimezoneOffset() * 60000
+      )
+        .toISOString()
+        .slice(0, 10);
+
+    days.push({
+      date: iso,
+      label: new Intl.DateTimeFormat(
+        'ca-ES',
+        { weekday: 'short' }
+      ).format(d),
+      day: d.getDate()
+    });
+  }
+
+  return `
+    <div class="page">
+
+      <div class="toolbar">
+
+        <div>
+
+          <p class="eyebrow">
+            Setmana
+          </p>
+
+          <h2>
+            Planificador
+          </h2>
+
+        </div>
+
+        <button
+          class="btn primary"
+          data-action="recalculate"
+        >
+          ${icon('sparkles', 17)}
+          Generar pla amb IA
+        </button>
+
+      </div>
+
+      <div class="planner">
+
+        ${
+          days.map(day => {
+
+            const dayTasks =
+              state.tasks.filter(
+                t =>
+                  t.dueDate === day.date &&
+                  t.status !== 'completed'
+              );
+
+            const sessions =
+              state.plan?.sessions?.filter(
+                s => {
+
+                  const base = new Date();
+
+                  base.setHours(
+                    12,
+                    0,
+                    0,
+                    0
+                  );
+
+                  base.setDate(
+                    base.getDate() +
+                    Number(
+                      s.dayOffset || 0
+                    )
+                  );
+
+                  const iso =
+                    new Date(
+                      base.getTime() -
+                      base.getTimezoneOffset() *
+                        60000
+                    )
+                      .toISOString()
+                      .slice(0, 10);
+
+                  return iso === day.date;
+                }
+              ) || [];
+
+            return `
+              <div class="day-column">
+
+                <div class="day-head">
+
+                  <span>
+                    ${day.label}
+                  </span>
+
+                  <strong>
+                    ${day.day}
+                  </strong>
+
+                </div>
+
+                <div class="day-body">
+
+                  ${
+                    dayTasks.map(t => `
+                      <div class="calendar-item task-item">
+
+                        <strong>
+                          ${esc(t.title)}
+                        </strong>
+
+                        <small>
+                          ${esc(t.subject)}
+                        </small>
+
+                      </div>
+                    `).join('')
+                  }
+
+                  ${
+                    sessions.map(s => {
+
+const task =
+  s.targetType === 'task'
+    ? state.tasks.find(
+        t => String(t.id) === String(s.targetId)
+      )
+    : null;
+
+const exam =
+  s.targetType === 'exam'
+    ? state.exams.find(
+        e => String(e.id) === String(s.targetId)
+      )
+    : null;
+
+                      return `
+                        <div class="calendar-item ai-item">
+
+                          <span>
+                            ${icon('sparkles', 13)}
+                          </span>
+
+                          <strong>
+${esc(
+  task?.title
+    ? `Estudi: ${task.title}`
+    : exam?.subject
+      ? `Estudi: ${exam.subject}`
+      : 'SessiÃ³'
+)}
+</strong>
+
+                          <small>
+                            ${s.minutes} min
+                          </small>
+
+                        </div>
+                      `;
+
+                    }).join('')
+                  }
+
+                  ${
+                    !dayTasks.length &&
+                    !sessions.length
+                      ? '<span class="day-empty">Lliure</span>'
+                      : ''
+                  }
+
+                </div>
+
+              </div>
+            `;
+
+          }).join('')
+        }
+
+      </div>
+
+    </div>
+  `;
+}
+
+function chatView() {
+  return `
+    <div class="page chat-page">
+
+      <section class="chat-panel">
+
+        <div class="chat-head">
+
+          <div class="assistant-avatar">
+            ${icon('sparkles', 20)}
+          </div>
+
+          <div>
+
+            <p class="eyebrow">
+              Assistent
+            </p>
+
+            <h2>
+              IA d'estudi
+            </h2>
+
+            <span>
+              Pot consultar les teves tasques i
+              exÃ mens per ajudar-te a organitzar-te.
+            </span>
+
+          </div>
+
+        </div>
+
+        <div
+          id="chat-messages"
+          class="chat-messages"
+        >
+
+          ${
+            state.chat.length
+
+              ? state.chat.map(m => `
+                  <div class="message ${m.role}">
+                    <div class="message-bubble">
+                      ${
+                        esc(m.text)
+                          .replaceAll(
+                            '\n',
+                            '<br>'
+                          )
+                      }
+                    </div>
+                  </div>
+                `).join('')
+
+              : `
+                <div class="chat-empty">
+
+                  <div class="assistant-avatar">
+                    ${icon('sparkles', 22)}
+                  </div>
+
+                  <h3>
+                    Com et puc ajudar?
+                  </h3>
+
+                  <p>
+                    Pregunta'm com prioritzar les
+                    tasques, quan estudiar o com
+                    preparar els prÃ²xims exÃ mens.
+                  </p>
+
+                </div>
+              `
+          }
+
+        </div>
+
+        <form
+          id="chat-form"
+          class="chat-form"
+        >
+
+          <input
+            id="chat-input"
+            type="text"
+            autocomplete="off"
+            placeholder="Escriu la teva pregunta..."
+            required
+          >
+
+          <button
+            class="btn primary"
+            type="submit"
+          >
+            ${icon('arrow', 17)}
+          </button>
+
+        </form>
+
+      </section>
+
+    </div>
+  `;
+}
+
+function progressView() {
+  const total =
+    state.tasks.length;
+
+  const done =
+    state.tasks.filter(
+      t => t.status === 'completed'
+    ).length;
+
+  const planned =
+    state.tasks.reduce(
+      (sum, t) =>
+        sum + Number(t.minutes || 0),
+      0
+    );
+
+  const completed =
+    state.tasks
+      .filter(
+        t => t.status === 'completed'
+      )
+      .reduce(
+        (sum, t) =>
+          sum + Number(t.minutes || 0),
+        0
+      );
+
+  const percent =
+    total
+      ? Math.round(
+          (done / total) * 100
+        )
+      : 0;
+
+  return `
+    <div class="page">
+
+      <div class="toolbar">
+
+        <div>
+
+          <p class="eyebrow">
+            Seguiment
+          </p>
+
+          <h2>
+            ProgrÃ©s
+          </h2>
+
+        </div>
+
+        <button
+          class="btn secondary"
+          data-action="export"
+        >
+          ${icon('download', 16)}
+          Exportar dades
+        </button>
+
+      </div>
+
+      <div class="progress-grid">
+
+        ${statCard(
+          'Tasques completades',
+          `${done}/${total}`,
+          `${percent}% del total`,
+          'check'
+        )}
+
+        ${statCard(
+          'Minuts planificats',
+          planned,
+          'Temps estimat de les tasques',
+          'clock'
+        )}
+
+        ${statCard(
+          'Minuts completats',
+          completed,
+          'Temps de tasques finalitzades',
+          'progress'
+        )}
+
+      </div>
+
+      <section class="panel">
+
+        <div class="panel-head">
+
+          <div>
+
+            <p class="eyebrow">
+              Resum
+            </p>
+
+            <h2>
+              Activitat acadÃ¨mica
+            </h2>
+
+          </div>
+
+        </div>
+
+        <div class="progress-bar">
+
+          <span
+            style="width:${percent}%"
+          ></span>
+
+        </div>
+
+        <p class="muted">
+          ${percent}% de les tasques registrades
+          estan completades.
+        </p>
+
+      </section>
+
+    </div>
+  `;
+}
+
+function settingsView() {
+  return `
+    <div class="page">
+
+      <div class="toolbar">
+
+        <div>
+
+          <p class="eyebrow">
+            Projecte TdR
+          </p>
+
+          <h2>
+            AvaluaciÃ³
+          </h2>
+
+        </div>
+
+      </div>
+
+      <div class="settings-grid">
+
+        <section class="panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <p class="eyebrow">
+                Registre
+              </p>
+
+              <h2>
+                Dades de l'aplicaciÃ³
+              </h2>
+
+            </div>
+
+          </div>
+
+          <p>
+            TRIA guarda localment les tasques,
+            els exÃ mens, els plans generats
+            i les converses d'estudi.
+          </p>
+
+          <div class="setting-row">
+
+            <span>
+              Tasques registrades
+            </span>
+
+            <strong>
+              ${state.tasks.length}
+            </strong>
+
+          </div>
+
+          <div class="setting-row">
+
+            <span>
+              ExÃ mens registrats
+            </span>
+
+            <strong>
+              ${state.exams.length}
+            </strong>
+
+          </div>
+
+          <div class="setting-row">
+
+            <span>
+              Missatges d'IA
+            </span>
+
+            <strong>
+              ${state.chat.length}
+            </strong>
+
+          </div>
+
+        </section>
+
+        <section class="panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <p class="eyebrow">
+                Manteniment
+              </p>
+
+              <h2>
+                Control de dades
+              </h2>
+
+            </div>
+
+          </div>
+
+          <div class="button-stack">
+
+            <button
+              class="btn secondary"
+              data-action="export"
+            >
+              ${icon('download', 16)}
+              Exportar dades JSON
+            </button>
+
+            <button
+              class="btn danger-solid"
+              data-action="reset"
+            >
+              ${icon('trash', 16)}
+              Restablir dades
+            </button>
+
+          </div>
+
+        </section>
+
+      </div>
+
+    </div>
+  `;
+}
+
+function render() {
+  const root =
+    document.querySelector('#root');
+
+  if (!root) return;
+
+  root.innerHTML = layout();
+
+  const content =
+    document.querySelector('#content');
+
+  const views = {
+    dashboard: dashboardView,
+    tasks: tasksView,
+    exams: examsView,
+    planner: plannerView,
+    chat: chatView,
+    progress: progressView,
+    settings: settingsView
+  };
+
+  content.innerHTML =
+    (
+      views[currentPage] ||
+      dashboardView
+    )();
+
+  bindEvents();
+
+  if (currentPage === 'chat') {
+
+    const box =
+      document.querySelector(
+        '#chat-messages'
+      );
+
+    if (box) {
+      box.scrollTop =
+        box.scrollHeight;
+    }
+  }
+}
+
+function bindEvents() {
+
+  document
+    .querySelectorAll('[data-page]')
+    .forEach(button => {
+
+      button.addEventListener(
+        'click',
+        () => {
+
+          currentPage =
+            button.dataset.page;
+
+          render();
+
+        }
+      );
+
+    });
+
+  document
+    .querySelectorAll('[data-action]')
+    .forEach(button => {
+
+      button.addEventListener(
+        'click',
+        handleAction
+      );
+
+    });
+
+  const chatForm =
+    document.querySelector(
+      '#chat-form'
+    );
+
+  if (chatForm) {
+
+    chatForm.addEventListener(
+      'submit',
+      sendChat
+    );
+
+  }
+}
+
+async function handleAction(event) {
+
+  const action =
+    event.currentTarget.dataset.action;
+
+  const id =
+    event.currentTarget.dataset.id;
+
+  if (action === 'new-task') {
+    openTaskModal();
+  }
+
+  if (action === 'edit-task') {
+    openTaskModal(id);
+  }
+
+  if (action === 'delete-task') {
+    deleteTask(id);
+  }
+
+  if (action === 'toggle-task') {
+    toggleTask(id);
+  }
+
+  if (action === 'new-exam') {
+    openExamModal();
+  }
+
+  if (action === 'edit-exam') {
+    openExamModal(id);
+  }
+
+  if (action === 'delete-exam') {
+    deleteExam(id);
+  }
+
+  if (action === 'close-modal') {
+    closeModal();
+  }
+
+  if (action === 'recalculate') {
+    await generatePlan();
+  }
+
+  if (action === 'export') {
+    exportData();
+  }
+
+  if (action === 'reset') {
+    resetData();
+  }
+}
+
+function openTaskModal(id = null) {
+
+  modalMode = 'task';
+  editingId = id;
+
+  const task =
+    id
+      ? state.tasks.find(
+          t => t.id === id
+        )
+      : null;
+
+  const modal =
+    document.querySelector(
+      '#modal'
+    );
+
+  const form =
+    document.querySelector(
+      '#modal-form'
+    );
+
+  document.querySelector(
+    '#modal-eyebrow'
+  ).textContent = 'TASQUES';
+
+  document.querySelector(
+    '#modal-title'
+  ).textContent =
+    task
+      ? 'Editar tasca'
+      : 'Nova tasca';
+
+  form.innerHTML = `
+
+    <div class="form-grid">
+
+      <label>
+        TÃ­tol
+
+        <input
+          name="title"
+          required
+          value="${esc(task?.title || '')}"
+          placeholder="Ex. Preparar presentaciÃ³"
+        >
+
+      </label>
+
+      <label>
+        Assignatura
+
+        <input
+          name="subject"
+          value="${esc(task?.subject || '')}"
+          placeholder="Ex. HistÃ²ria"
+        >
+
+      </label>
+
+      <label class="full">
+        DescripciÃ³
+
+        <textarea
+          name="description"
+          rows="3"
+          placeholder="QuÃ¨ has de fer?"
+        >${esc(task?.description || '')}</textarea>
+
+      </label>
+
+      <label>
+        Data lÃ­mit
+
+        <input
+          name="dueDate"
+          type="date"
+          required
+          value="${task?.dueDate || todayISO()}"
+        >
+
+      </label>
+
+      <label>
+        Temps estimat (min)
+
+        <input
+          name="minutes"
+          type="number"
+          min="5"
+          step="5"
+          value="${Number(task?.minutes || 30)}"
+        >
+
+      </label>
+
+      <label>
+        Dificultat
+
+        <select name="difficulty">
+
+          ${
+            [1,2,3,4,5]
+              .map(
+                n => `
+                  <option
+                    value="${n}"
+                    ${
+                      Number(
+                        task?.difficulty || 3
+                      ) === n
+                        ? 'selected'
+                        : ''
+                    }
+                  >
+                    ${n} Â· ${difficultyLabel(n)}
+                  </option>
+                `
+              )
+              .join('')
+          }
+
+        </select>
+
+      </label>
+
+      <label>
+        Estat
+
+        <select name="status">
+
+          ${
+            ['pending','inprogress','completed']
+              .map(
+                s => `
+                  <option
+                    value="${s}"
+                    ${
+                      task?.status === s
+                        ? 'selected'
+                        : ''
+                    }
+                  >
+                    ${statusLabel(s)}
+                  </option>
+                `
+              )
+              .join('')
+          }
+
+        </select>
+
+      </label>
+
+    </div>
+
+    <div class="modal-actions">
+
+      <button
+        type="button"
+        class="btn secondary"
+        data-action="close-modal"
+      >
+        CancelÂ·lar
+      </button>
+
+      <button
+        type="submit"
+        class="btn primary"
+      >
+        Guardar tasca
+      </button>
+
+    </div>
+  `;
+
+  form.onsubmit =
+    saveTaskFromForm;
+
+  modal.classList.remove(
+    'hidden'
+  );
+}
+
+function saveTaskFromForm(event) {
+
+  event.preventDefault();
+
+  const data =
+    new FormData(
+      event.currentTarget
+    );
+
+  const item = {
+
+    id:
+      editingId ||
+      uid('task'),
+
+    title:
+      data.get('title').trim(),
+
+    subject:
+      data.get('subject').trim() ||
+      'General',
+
+    description:
+      data.get('description').trim(),
+
+    dueDate:
+      data.get('dueDate'),
+
+    minutes:
+      Number(
+        data.get('minutes')
+      ) || 30,
+
+    difficulty:
+      Number(
+        data.get('difficulty')
+      ) || 3,
+
+    status:
+      data.get('status') ||
+      'pending'
+
+  };
+
+  if (editingId) {
+
+    state.tasks =
+      state.tasks.map(
+        t =>
+          t.id === editingId
+            ? item
+            : t
+      );
+
+  } else {
+
+    state.tasks.push(item);
+
+  }
+
+  saveState();
+  closeModal();
+  render();
+}
+
+function deleteTask(id) {
+
+  if (
+    !confirm(
+      'Vols eliminar aquesta tasca?'
+    )
+  ) {
+    return;
+  }
+
+  state.tasks =
+    state.tasks.filter(
+      t => t.id !== id
+    );
+
+  saveState();
+  render();
+}
+
+function toggleTask(id) {
+
+  state.tasks =
+    state.tasks.map(t => {
+
+      if (t.id !== id) {
+        return t;
+      }
+
+      return {
+        ...t,
+        status:
+          t.status === 'completed'
+            ? 'pending'
+            : 'completed'
+      };
+
+    });
+
+  saveState();
+  render();
+}
+
+function openExamModal(id = null) {
+
+  modalMode = 'exam';
+  editingId = id;
+
+  const exam =
+    id
+      ? state.exams.find(
+          e => e.id === id
+        )
+      : null;
+
+  const modal =
+    document.querySelector(
+      '#modal'
+    );
+
+  const form =
+    document.querySelector(
+      '#modal-form'
+    );
+
+  document.querySelector(
+    '#modal-eyebrow'
+  ).textContent = 'EXÃ€MENS';
+
+  document.querySelector(
+    '#modal-title'
+  ).textContent =
+    exam
+      ? 'Editar examen'
+      : 'Nou examen';
+
+  form.innerHTML = `
+
+    <div class="form-grid">
+
+      <label>
+        Assignatura
+
+        <input
+          name="subject"
+          required
+          value="${esc(exam?.subject || '')}"
+          placeholder="Ex. MatemÃ tiques"
+        >
+
+      </label>
+
+      <label>
+        Data
+
+        <input
+          name="date"
+          type="date"
+          required
+          value="${exam?.date || todayISO()}"
+        >
+
+      </label>
+
+      <label class="full">
+        Temari
+
+        <textarea
+          name="syllabus"
+          rows="3"
+          placeholder="Temes que entren a l'examen"
+        >${esc(exam?.syllabus || '')}</textarea>
+
+      </label>
+
+      <label>
+        Dificultat
+
+        <select name="difficulty">
+
+          ${
+            [1,2,3,4,5]
+              .map(
+                n => `
+                  <option
+                    value="${n}"
+                    ${
+                      Number(
+                        exam?.difficulty || 3
+                      ) === n
+                        ? 'selected'
+                        : ''
+                    }
+                  >
+                    ${n} Â· ${difficultyLabel(n)}
+                  </option>
+                `
+              )
+              .join('')
+          }
+
+        </select>
+
+      </label>
+
+      <label>
+        Temps disponible (min)
+
+        <input
+          name="availableMinutes"
+          type="number"
+          min="0"
+          step="15"
+          value="${Number(exam?.availableMinutes || 120)}"
+        >
+
+      </label>
+
+    </div>
+
+    <div class="modal-actions">
+
+      <button
+        type="button"
+        class="btn secondary"
+        data-action="close-modal"
+      >
+        CancelÂ·lar
+      </button>
+
+      <button
+        type="submit"
+        class="btn primary"
+      >
+        Guardar examen
+      </button>
+
+    </div>
+
+  `;
+
+  form.onsubmit =
+    saveExamFromForm;
+
+  modal.classList.remove(
+    'hidden'
+  );
+}
+
+function saveExamFromForm(event) {
+
+  event.preventDefault();
+
+  const data =
+    new FormData(
+      event.currentTarget
+    );
+
+  const item = {
+
+    id:
+      editingId ||
+      uid('exam'),
+
+    subject:
+      data.get('subject').trim(),
+
+    date:
+      data.get('date'),
+
+    syllabus:
+      data.get('syllabus').trim(),
+
+    difficulty:
+      Number(
+        data.get('difficulty')
+      ) || 3,
+
+    availableMinutes:
+      Number(
+        data.get(
+          'availableMinutes'
+        )
+      ) || 0
+
+  };
+
+  if (editingId) {
+
+    state.exams =
+      state.exams.map(
+        e =>
+          e.id === editingId
+            ? item
+            : e
+      );
+
+  } else {
+
+    state.exams.push(item);
+
+  }
+
+  saveState();
+  closeModal();
+  render();
+}
+
+function deleteExam(id) {
+
+  if (
+    !confirm(
+      'Vols eliminar aquest examen?'
+    )
+  ) {
+    return;
+  }
+
+  state.exams =
+    state.exams.filter(
+      e => e.id !== id
+    );
+
+  saveState();
+  render();
+}
+
+function closeModal() {
+
+  const modal =
+    document.querySelector(
+      '#modal'
+    );
+
+  if (modal) {
+    modal.classList.add(
+      'hidden'
+    );
+  }
+
+  modalMode = null;
+  editingId = null;
+}
+
+async function generatePlan() {
+
+  const buttons =
+    [
+      ...document.querySelectorAll(
+        '[data-action="recalculate"]'
+      )
+    ];
+
+  buttons.forEach(button => {
+
+    button.disabled = true;
+
+    button.innerHTML =
+      `${icon('refresh', 16)} Calculant...`;
+
+  });
+
+  try {
+
+    const response =
+      await fetch(
+        '/api/ai/plan',
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              tasks:
+                state.tasks,
+              exams:
+                state.exams
+            })
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+
+      throw new Error(
+        data.error ||
+        'No sâ€™ha pogut generar el pla.'
+      );
+
+    }
+
+if (Array.isArray(data.sessions)) {
+  data.sessions = data.sessions.filter(session => {
+    if (
+      session.targetType === 'task' &&
+      !state.tasks.some(
+        task => String(task.id) === String(session.targetId)
+      )
+    ) {
+      return false;
+    }
+
+    if (
+      session.targetType === 'exam' &&
+      !state.exams.some(
+        exam => String(exam.id) === String(session.targetId)
+      )
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+}
+state.plan = data;
+saveState();
+alert('Pla actualitzat correctament.');
+render();
+
+  } catch (error) {
+
+    alert(
+      `No sâ€™ha pogut generar el pla: ${error.message}`
+    );
+
+    buttons.forEach(button => {
+
+      button.disabled = false;
+
+      button.innerHTML =
+        `${icon('sparkles', 17)} Recalcular amb IA`;
+
+    });
+
+  }
+}
+
+async function sendChat(event) {
+
+  event.preventDefault();
+
+  const input =
+    document.querySelector(
+      '#chat-input'
+    );
+
+  const message =
+    input.value.trim();
+
+  if (!message) return;
+
+  state.chat.push({
+    role: 'user',
+    text: message
+  });
+
+  input.value = '';
+
+  saveState();
+  render();
+
+  try {
+
+    const response =
+      await fetch(
+        '/api/ai/chat',
+        {
+          method: 'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+              message,
+              tasks:
+                state.tasks,
+              exams:
+                state.exams
+            })
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+
+      throw new Error(
+        data.error ||
+        'Error de la IA.'
+      );
+
+    }
+
+    state.chat.push({
+      role: 'assistant',
+      text:
+        data.answer ||
+        'No he rebut cap resposta.'
+    });
+
+  } catch (error) {
+
+    state.chat.push({
+      role: 'assistant',
+      text:
+        `No he pogut connectar amb la IA: ${error.message}`
+    });
+
+  }
+
+  saveState();
+  render();
+}
+
+function exportData() {
+
+  const payload = {
+
+    exportedAt:
+      new Date().toISOString(),
+
+    app:
+      'TRIA',
+
+    tasks:
+      state.tasks,
+
+    exams:
+      state.exams,
+
+    plan:
+      state.plan,
+
+    chat:
+      state.chat
+
+  };
+
+  const blob =
+    new Blob(
+      [
+        JSON.stringify(
+          payload,
+          null,
+          2
+        )
+      ],
+      {
+        type:
+          'application/json'
+      }
+    );
+
+  const url =
+    URL.createObjectURL(
+      blob
+    );
+
+  const a =
+    document.createElement(
+      'a'
+    );
+
+  a.href = url;
+
+  a.download =
+    `tria-dades-${todayISO()}.json`;
+
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+function resetData() {
+
+  if (
+    !confirm(
+      'AixÃ² eliminarÃ  totes les dades guardades en aquest navegador. Vols continuar?'
+    )
+  ) {
+    return;
+  }
+
+  state =
+    structuredClone(
+      defaultState
+    );
+
+  saveState();
+
+  currentPage =
+    'dashboard';
+
+  render();
+}
+
+document.addEventListener(
+  'keydown',
+  event => {
+
+    if (event.key === 'Escape') {
+      closeModal();
+    }
+
+  }
+);
+
+document.addEventListener(
+  'click',
+  event => {
+
+    if (
+      event.target?.id ===
+      'modal'
+    ) {
+      closeModal();
+    }
+
+  }
+);
+
+render();
 
 /* =========================================================
-   APP
+   TRIA Â· HORARI + ESCANEIG IA
    ========================================================= */
 
-.app-shell {
-  min-height: 100vh;
-  background: #050505;
+.schedule-toolbar {
+  align-items: flex-start;
 }
 
-.main {
-  min-height: 100vh;
-  width: calc(100% - 250px);
-  margin-left: 250px;
-  padding: 0 32px 45px;
-  background: #050505;
-}
-
-
-/* =========================================================
-   SIDEBAR
-   ========================================================= */
-
-.sidebar {
-  position: fixed;
-  z-index: 20;
-  top: 0;
-  bottom: 0;
-  left: 0;
-
-  width: 250px;
-
+.schedule-toolbar-actions {
   display: flex;
-  flex-direction: column;
-
-  background: #080808;
-  border-right: 1px solid #1d1d1d;
-}
-
-.brand {
-  min-height: 92px;
-
-  display: flex;
-  align-items: center;
-
-  gap: 11px;
-
-  padding: 18px 18px;
-
-  border-bottom: 1px solid #171717;
-}
-
-.brand-mark {
-  width: 38px;
-  height: 38px;
-
-  display: grid;
-  place-items: center;
-
-  flex: 0 0 auto;
-
-  border: 1px solid #292929;
-  border-radius: 10px;
-
-  background: #151515;
-
-  color: #ffffff;
-}
-
-.brand-copy {
-  min-width: 0;
-
-  display: flex;
-  flex-direction: column;
-
-  gap: 2px;
-}
-
-.brand-copy strong {
-  color: #ffffff;
-  font-size: 17px;
-  letter-spacing: .04em;
-}
-
-.brand-copy span {
-  color: #777;
-  font-size: 9px;
-  line-height: 1.25;
-}
-
-.school-logo {
-  width: 38px;
-  height: 38px;
-
-  margin-left: auto;
-
-  object-fit: contain;
-
-  border-radius: 7px;
-}
-
-
-/* =========================================================
-   NAVEGACIÓ
-   ========================================================= */
-
-.nav {
-  display: flex;
-  flex-direction: column;
-
-  gap: 4px;
-
-  padding: 15px 10px;
-}
-
-.nav-item {
-  width: 100%;
-
-  min-height: 43px;
-
-  display: flex;
-  align-items: center;
-
-  gap: 11px;
-
-  padding: 0 12px;
-
-  border: 0;
-  border-radius: 9px;
-
-  background: transparent;
-
-  color: #858585;
-
-  text-align: left;
-
-  font-size: 12px;
-  font-weight: 700;
-
-  transition:
-    background .15s ease,
-    color .15s ease;
-}
-
-.nav-item:hover {
-  background: #111111;
-  color: #f5f5f5;
-}
-
-.nav-item.active {
-  background: #171717;
-  color: #f5f5f5;
-}
-
-.nav-item .icon {
-  width: 17px;
-  height: 17px;
-}
-
-
-/* =========================================================
-   PARTE INFERIOR SIDEBAR
-   ========================================================= */
-
-.sidebar-bottom {
-  margin-top: auto;
-
-  padding: 14px;
-
-  border-top: 1px solid #171717;
-}
-
-.ai-status {
-  display: flex;
-  align-items: center;
-
+  flex-wrap: wrap;
   gap: 10px;
-
-  padding: 10px 8px;
-}
-
-.status-dot {
-  width: 7px;
-  height: 7px;
-
-  flex: 0 0 auto;
-
-  border-radius: 50%;
-
-  background: #4ade80;
-
-  box-shadow:
-    0 0 0 4px rgba(74, 222, 128, .07);
-}
-
-.ai-status div {
-  min-width: 0;
-
-  display: flex;
-  flex-direction: column;
-
-  gap: 2px;
-}
-
-.ai-status strong {
-  color: #d7d7d7;
-  font-size: 11px;
-}
-
-.ai-status small {
-  color: #666;
-  font-size: 9px;
-}
-
-
-/* =========================================================
-   LOGOUT
-   ========================================================= */
-
-.logout-btn {
-  width: 100%;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-
-  margin: 12px auto 0;
-
-  background: linear-gradient(
-    135deg,
-    #c9343f 0%,
-    #7d1f27 100%
-  );
-
-  color: #fff;
-
-  border: 1px solid rgba(255, 100, 100, 0.3);
-  border-radius: 9px;
-
-  min-height: 40px;
-
-  font-size: 12px;
-  font-weight: 800;
-
-  box-shadow:
-    0 8px 20px rgba(150, 30, 40, 0.18);
-}
-
-.logout-btn:hover {
-  filter: brightness(1.1);
-}
-
-
-/* =========================================================
-   TOPBAR
-   ========================================================= */
-
-.topbar {
-  min-height: 94px;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  gap: 20px;
-
-  border-bottom: 1px solid #171717;
-}
-
-.topbar h1 {
-  margin: 4px 0 0;
-
-  color: #f5f5f5;
-
-  font-size: 23px;
-  line-height: 1.1;
-  letter-spacing: -.025em;
-}
-
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-
-/* =========================================================
-   TEXTOS
-   ========================================================= */
-
-.eyebrow {
-  margin: 0;
-
-  color: #777;
-
-  font-size: 9px;
-  font-weight: 800;
-
-  letter-spacing: .14em;
-  text-transform: uppercase;
-}
-
-h1,
-h2,
-h3,
-p {
-  margin-top: 0;
-}
-
-h2 {
-  color: #f5f5f5;
-
-  font-size: 21px;
-  line-height: 1.2;
-
-  letter-spacing: -.02em;
-}
-
-h3 {
-  color: #eee;
-
-  font-size: 14px;
-  line-height: 1.35;
-}
-
-
-/* =========================================================
-   BOTONES
-   ========================================================= */
-
-.btn {
-  min-height: 39px;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  gap: 8px;
-
-  padding: 0 14px;
-
-  border: 1px solid transparent;
-  border-radius: 9px;
-
-  font-size: 11px;
-  font-weight: 800;
-
-  transition:
-    background .15s ease,
-    border-color .15s ease,
-    transform .15s ease,
-    color .15s ease;
-}
-
-.btn.primary {
-  background: #f2f2f2;
-  color: #050505;
-
-  border-color: #f2f2f2;
-}
-
-.btn.primary:hover {
-  background: #ffffff;
-  transform: translateY(-1px);
-}
-
-.btn.secondary {
-  background: #111111;
-  color: #aaa;
-
-  border-color: #292929;
-}
-
-.btn.secondary:hover {
-  background: #171717;
-  color: #fff;
-}
-
-.btn.ghost {
-  background: transparent;
-  color: #888;
-
-  border-color: transparent;
-}
-
-.btn.ghost:hover {
-  background: #151515;
-  color: #fff;
-}
-
-.icon-btn {
-  width: 34px;
-  height: 34px;
-
-  display: inline-grid;
-  place-items: center;
-
-  padding: 0;
-
-  border: 1px solid #242424;
-  border-radius: 8px;
-
-  background: #0d0d0d;
-
-  color: #888;
-
-  transition:
-    background .15s ease,
-    color .15s ease,
-    border-color .15s ease;
-}
-
-.icon-btn:hover {
-  background: #151515;
-  color: #fff;
-  border-color: #333;
-}
-
-.icon-btn.danger:hover {
-  color: #ff6b6b;
-  border-color: rgba(255, 107, 107, .25);
-}
-
-.text-btn {
-  display: inline-flex;
-  align-items: center;
-
-  gap: 5px;
-
-  padding: 0;
-
-  border: 0;
-
-  background: transparent;
-
-  color: #858585;
-
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.text-btn:hover {
-  color: #fff;
-}
-
-
-/* =========================================================
-   PAGE
-   ========================================================= */
-
-.page {
-  padding-top: 26px;
-}
-
-.section-intro {
-  margin-bottom: 20px;
-}
-
-.section-intro h2 {
-  margin:
-    5px 0 5px;
-}
-
-.section-intro p:last-child {
-  margin-bottom: 0;
-}
-
-
-/* =========================================================
-   HERO
-   ========================================================= */
-
-.hero {
-  position: relative;
-
-  min-height: 260px;
-
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-
-  gap: 30px;
-
-  padding: 27px;
-
-  overflow: hidden;
-  isolation: isolate;
-
-  border: 1px solid #222;
-  border-radius: 16px;
-
-  background: #0a0a0a !important;
-}
-
-.hero > * {
-  position: relative;
-  z-index: 1;
-}
-
-.hero h2 {
-  max-width: 650px;
-
-  margin:
-    6px 0 10px;
-
-  font-size: 27px;
-  letter-spacing: -.035em;
-}
-
-.hero > div > p:not(.eyebrow) {
-  max-width: 650px;
-
-  margin-bottom: 0;
-
-  color: #8b8b8b;
-
-  font-size: 13px;
-  line-height: 1.65;
-}
-
-
-/* =========================================================
-   CITA DEL PROFESSORAT
-   ========================================================= */
-
-.teacher-quote {
-  position: relative;
-
-  max-width: 850px;
-
-  margin-top: 24px;
-
-  overflow: hidden;
-
-  padding: 18px 20px;
-
-  background: #0b0b0b !important;
-
-  border-left: 2px solid #8b7cff !important;
-  border-radius: 0 10px 10px 0;
-
-  box-shadow: none !important;
-}
-
-.teacher-quote::before {
-  content: "";
-
-  position: absolute;
-
-  left: -10px;
-  top: 0;
-
-  width: 105%;
-  height: 100%;
-
-  background: linear-gradient(
-    90deg,
-    rgba(139, 124, 255, 0.16) 0%,
-    rgba(139, 124, 255, 0.10) 18%,
-    rgba(139, 124, 255, 0.055) 38%,
-    rgba(139, 124, 255, 0.025) 58%,
-    rgba(139, 124, 255, 0.008) 78%,
-    transparent 100%
-  );
-
-  filter: blur(22px);
-
-  pointer-events: none;
-
-  z-index: 0;
-}
-
-.teacher-quote::after {
-  content: "";
-
-  position: absolute;
-
-  inset: 0;
-
-  background: linear-gradient(
-    180deg,
-    #0b0b0b 0%,
-    transparent 22%,
-    transparent 78%,
-    #0b0b0b 100%
-  );
-
-  opacity: .35;
-
-  pointer-events: none;
-
-  z-index: 0;
-}
-
-.teacher-quote-label,
-.teacher-quote blockquote {
-  position: relative;
-  z-index: 1;
-}
-
-.teacher-quote-label {
-  margin-bottom: 9px;
-
-  color: #bdbdbd !important;
-
-  font-size: 10px;
-  font-weight: 800;
-
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-
-.teacher-quote blockquote {
-  margin: 0;
-
-  color: #a8a8a8 !important;
-
-  font-size: 13px;
-  line-height: 1.6;
-
-  font-style: italic;
-}
-
-
-/* =========================================================
-   STATS
-   ========================================================= */
-
-.stats-grid {
-  display: grid;
-
-  grid-template-columns:
-    repeat(4, minmax(0, 1fr));
-
-  gap: 12px;
-
-  margin-top: 15px;
-  margin-bottom: 15px;
-}
-
-.stat-card {
-  min-height: 105px;
-
-  display: flex;
-  align-items: center;
-
-  gap: 13px;
-
-  padding: 17px;
-
-  border: 1px solid #222;
-  border-radius: 13px;
-
-  background: #0b0b0b;
-}
-
-.stat-icon {
-  width: 39px;
-  height: 39px;
-
-  display: grid;
-  place-items: center;
-
-  flex: 0 0 auto;
-
-  border-radius: 9px;
-
-  background: #151515;
-
-  color: #bdbdbd;
-}
-
-.stat-card > div:last-child {
-  min-width: 0;
-
-  display: flex;
-  flex-direction: column;
-
-  gap: 3px;
-}
-
-.stat-card span {
-  color: #777;
-
-  font-size: 10px;
-}
-
-.stat-card strong {
-  color: #f3f3f3;
-
-  font-size: 21px;
-  line-height: 1.05;
-}
-
-.stat-card small {
-  color: #666;
-
-  font-size: 9px;
-}
-
-
-/* =========================================================
-   COLUMNES
-   ========================================================= */
-
-.two-col {
-  display: grid;
-
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
-
-  gap: 15px;
-}
-
-.panel {
-  padding: 19px;
-
-  border: 1px solid #222;
-  border-radius: 14px;
-
-  background: #0b0b0b;
-}
-
-.panel-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-
-  gap: 15px;
-
-  margin-bottom: 17px;
-}
-
-.panel-head h2 {
-  margin:
-    4px 0 0;
-}
-
-
-/* =========================================================
-   LISTES
-   ========================================================= */
-
-.list {
-  display: flex;
-  flex-direction: column;
-}
-
-.task-card,
-.exam-card {
-  display: flex;
-  align-items: center;
-
-  gap: 15px;
-
-  padding: 14px 0;
-
-  border-bottom: 1px solid #202020;
-}
-
-.task-card:first-child,
-.exam-card:first-child {
-  padding-top: 0;
-}
-
-.task-card:last-child,
-.exam-card:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.task-main {
-  min-width: 0;
-
-  flex: 1;
-
-  display: flex;
-  align-items: flex-start;
-
-  gap: 11px;
-}
-
-.task-check {
-  width: 20px;
-  height: 20px;
-
-  flex: 0 0 auto;
-
-  display: grid;
-  place-items: center;
-
-  margin-top: 1px;
-
-  border: 1px solid #333;
-  border-radius: 50%;
-
-  background: #0d0d0d;
-
-  color: #fff;
-
-  cursor: pointer;
-}
-
-.task-check.done {
-  background: #f2f2f2;
-  border-color: #f2f2f2;
-  color: #050505;
-}
-
-.task-info {
-  min-width: 0;
-  flex: 1;
-}
-
-.task-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  flex-wrap: wrap;
-}
-
-.task-title-row h3 {
-  margin: 0;
-}
-
-.task-info p {
-  margin:
-    4px 0 8px;
-
-  color: #777;
-
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.task-meta {
-  display: flex;
-  flex-wrap: wrap;
-
-  gap: 11px;
-
-  color: #777;
-
-  font-size: 9px;
-}
-
-.task-meta span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.task-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.badge {
-  display: inline-flex;
-  align-items: center;
-
-  padding: 4px 7px;
-
-  border: 1px solid #292929;
-  border-radius: 999px;
-
-  background: #111;
-
-  color: #8c8c8c;
-
-  font-size: 8px;
-  font-weight: 700;
-}
-
-.danger-text {
-  color: #ff6b6b !important;
-}
-
-
-/* =========================================================
-   EXAMS
-   ========================================================= */
-
-.exam-card {
-  align-items: stretch;
-}
-
-.exam-date {
-  width: 90px;
-
-  flex: 0 0 auto;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 10px;
-
-  border: 1px solid #242424;
-  border-radius: 9px;
-
-  background: #151515;
-
-  color: #ddd;
-
-  font-size: 10px;
-  text-align: center;
-}
-
-.exam-info {
-  min-width: 0;
-  flex: 1;
-}
-
-.exam-info h3 {
-  margin: 0 0 4px;
-}
-
-.exam-info p {
-  margin:
-    0 0 8px;
-
-  color: #777;
-
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.exam-meta {
-  display: flex;
-  flex-wrap: wrap;
-
-  gap: 12px;
-
-  color: #777;
-
-  font-size: 9px;
-}
-
-.exam-actions {
-  display: flex;
-  align-items: center;
-
-  gap: 6px;
-}
-
-
-/* =========================================================
-   AI
-   ========================================================= */
-
-.ai-summary {
-  margin-top: 15px;
-}
-
-.ai-badge {
-  display: inline-flex;
-  align-items: center;
-
-  gap: 6px;
-
-  padding: 6px 9px;
-
-  border: 1px solid #292929;
-  border-radius: 999px;
-
-  background: #171717;
-
-  color: #d0d0d0;
-
-  font-size: 9px;
-  font-weight: 800;
-}
-
-.ai-summary p {
-  margin-bottom: 0;
-
-  color: #999;
-
-  font-size: 12px;
-  line-height: 1.65;
-}
-
-
-/* =========================================================
-   PLANIFICADOR
-   ========================================================= */
-
-.planner {
-  display: grid;
-
-  grid-template-columns:
-    repeat(7, minmax(145px, 1fr));
-
-  gap: 9px;
-
-  overflow-x: auto;
-  padding-bottom: 5px;
-}
-
-.day-column {
-  min-height: 380px;
-
-  border: 1px solid #222;
-  border-radius: 12px;
-
-  background: #0b0b0b;
-
-  overflow: hidden;
-}
-
-.day-head {
-  padding: 12px;
-
-  border-bottom: 1px solid #222;
-
-  background: #101010;
-
-  color: #eee;
-
-  font-size: 10px;
-  font-weight: 800;
-
-  text-transform: capitalize;
-}
-
-.day-body {
-  min-height: 320px;
-
-  display: flex;
-  flex-direction: column;
-
-  gap: 7px;
-
-  padding: 9px;
-}
-
-.calendar-item {
-  display: flex;
-  flex-direction: column;
-
-  gap: 3px;
-
-  padding: 9px;
-
-  border: 1px solid #282828;
-  border-radius: 8px;
-
-  background: #121212;
-}
-
-.calendar-item strong {
-  color: #ddd;
-
-  font-size: 10px;
-}
-
-.calendar-item span,
-.calendar-item small {
-  color: #777;
-
-  font-size: 9px;
-}
-
-.task-item {
-  border-left:
-    2px solid #8b7cff;
-}
-
-.ai-item {
-  border-left:
-    2px solid #5fb7a8;
-}
-
-.day-empty {
-  padding: 20px 7px;
-
-  color: #555;
-
-  font-size: 9px;
-  text-align: center;
-}
-
-
-/* =========================================================
-   CHAT
-   ========================================================= */
-
-.chat-panel {
-  min-height: 600px;
-
-  display: flex;
-  flex-direction: column;
-
-  border: 1px solid #222;
-  border-radius: 14px;
-
-  background: #0b0b0b;
-
-  overflow: hidden;
-}
-
-.chat-messages {
-  flex: 1;
-
-  min-height: 470px;
-
-  padding: 20px;
-
-  overflow-y: auto;
-}
-
-.chat-message {
-  display: flex;
-
-  margin-bottom: 13px;
-}
-
-.chat-message.user {
   justify-content: flex-end;
 }
 
-.chat-bubble {
-  max-width: min(700px, 80%);
-
-  padding: 11px 14px;
-
-  border-radius: 13px;
-
-  background: #151515;
-
-  color: #ddd;
-
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.chat-message.user .chat-bubble {
-  background: #f2f2f2;
-  color: #050505;
-}
-
-.chat-bubble h2,
-.chat-bubble h3 {
-  margin:
-    4px 0 8px;
-
-  color: inherit;
-}
-
-.chat-bubble strong {
-  color: inherit;
-}
-
-.chat-empty {
-  min-height: 430px;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-
-  text-align: center;
-}
-
-.chat-empty h3 {
-  margin:
-    14px 0 5px;
-}
-
-.chat-empty p {
-  max-width: 430px;
-
-  margin: 0;
-
-  color: #777;
-
-  font-size: 12px;
-  line-height: 1.55;
-}
-
-.chat-input {
-  display: flex;
-
-  gap: 9px;
-
-  padding: 14px;
-
-  border-top: 1px solid #202020;
-}
-
-.chat-input input {
-  min-width: 0;
-  flex: 1;
-
-  background: #0b0b0b;
-  border-color: #282828;
-}
-
-
-/* =========================================================
-   FORMS
-   ========================================================= */
-
-input,
-textarea,
-select {
-  width: 100%;
-
-  border: 1px solid #292929;
-  border-radius: 9px;
-
-  outline: none;
-
-  background: #0b0b0b;
-
-  color: #f5f5f5;
-}
-
-input,
-select {
-  height: 42px;
-
-  padding: 0 12px;
-}
-
-textarea {
-  padding: 11px 12px;
-
-  resize: vertical;
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: #555;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  border-color: #555;
-
-  box-shadow:
-    0 0 0 3px rgba(255,255,255,.04);
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-
-  gap: 7px;
-
-  color: #999;
-
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.form-grid {
-  display: grid;
-
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
-
-  gap: 15px;
-}
-
-.form-grid .full {
-  grid-column: 1 / -1;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-
-  gap: 9px;
-
-  margin-top: 20px;
-}
-
-.modal-actions-right {
-  display: flex;
-  align-items: center;
-
-  gap: 10px;
-
-  margin-left: auto;
-}
-
-
-/* =========================================================
-   MODAL
-   ========================================================= */
-
-.modal-backdrop {
-  position: fixed;
-
-  inset: 0;
-
-  z-index: 100;
-
-  display: grid;
-  place-items: center;
-
-  padding: 20px;
-
-  background: rgba(2, 2, 2, .78);
-
-  backdrop-filter: blur(5px);
-}
-
-.modal-backdrop.hidden {
+.schedule-file-input {
   display: none;
 }
 
-.modal {
-  width: min(650px, 100%);
-
-  max-height:
-    calc(100vh - 40px);
-
-  overflow-y: auto;
-
-  padding: 22px;
-
-  border: 1px solid #292929;
-  border-radius: 18px;
-
+.schedule-import-card,
+.schedule-ai-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 16px 18px;
   background: #0d0d0d;
-
-  box-shadow: var(--shadow);
-}
-
-.modal-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-
-  gap: 15px;
-
-  margin-bottom: 20px;
-}
-
-.modal-head h2 {
-  margin:
-    5px 0 0;
-
-  font-size: 21px;
-}
-
-
-/* =========================================================
-   PROGRESS
-   ========================================================= */
-
-.progress-grid {
-  display: grid;
-
-  grid-template-columns:
-    repeat(3, minmax(0, 1fr));
-
-  gap: 15px;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 10px;
-
-  overflow: hidden;
-
-  margin: 15px 0;
-
-  border-radius: 999px;
-
-  background: #202020;
-}
-
-.progress-fill {
-  height: 100%;
-
-  border-radius: inherit;
-
-  background: #f0f0f0;
-
-  transition:
-    width .3s ease;
-}
-
-
-/* =========================================================
-   SETTINGS
-   ========================================================= */
-
-.settings-grid {
-  display: grid;
-
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
-
-  gap: 18px;
-}
-
-.settings-actions {
-  display: flex;
-  flex-wrap: wrap;
-
-  gap: 9px;
-
-  margin-top: 18px;
-}
-
-.setting-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  padding: 13px 0;
-
-  border-bottom: 1px solid #202020;
-
-  color: #888;
-
-  font-size: 12px;
-}
-
-.setting-row:last-child {
-  border-bottom: 0;
-}
-
-.setting-row strong {
-  color: #eee;
-}
-
-.button-stack {
-  display: flex;
-  flex-direction: column;
-
-  gap: 10px;
-}
-
-
-/* =========================================================
-   EMPTY
-   ========================================================= */
-
-.empty {
-  padding: 35px 20px;
-
-  color: #777;
-
-  text-align: center;
-
-  font-size: 12px;
-}
-
-.empty h3 {
-  margin:
-    10px 0 5px;
-}
-
-.empty p {
-  margin-bottom: 15px;
-}
-
-.empty-icon {
-  width: 45px;
-  height: 45px;
-
-  display: grid;
-  place-items: center;
-
-  margin: 0 auto;
-
-  border: 1px solid #292929;
+  border: 1px solid rgba(139, 124, 255, 0.18);
   border-radius: 12px;
-
-  background: #151515;
-
-  color: #999;
 }
 
-
-/* =========================================================
-   LOADING
-   ========================================================= */
-
-.loading-screen {
-  min-height: 100vh;
-
+.schedule-import-icon {
+  width: 40px;
+  height: 40px;
   display: grid;
   place-items: center;
-
-  align-content: center;
-
-  gap: 12px;
-
-  background: #050505;
-
-  color: #777;
-
-  font-size: 12px;
-}
-
-.loading-spinner {
-  width: 28px;
-  height: 28px;
-
-  border: 2px solid #252525;
-  border-top-color: #8b7cff;
-
-  border-radius: 50%;
-
-  animation:
-    tria-spin .8s linear infinite;
-}
-
-@keyframes tria-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-
-/* =========================================================
-   LOGIN
-   ========================================================= */
-
-.auth-screen {
-  min-height: 100vh;
-
-  display: grid;
-  place-items: center;
-
-  padding: 25px;
-
-  background: #050505;
-}
-
-.auth-card {
-  width: min(430px, 100%);
-
-  padding: 30px;
-
-  border: 1px solid #242424;
-  border-radius: 18px;
-
-  background: #0b0b0b;
-
-  box-shadow:
-    0 25px 70px rgba(0,0,0,.35);
-}
-
-.auth-brand {
-  display: flex;
-  align-items: center;
-
-  gap: 11px;
-
-  margin-bottom: 30px;
-}
-
-.auth-brand .brand-mark {
-  width: 42px;
-  height: 42px;
-}
-
-.auth-brand > div:last-child {
-  display: flex;
-  flex-direction: column;
-
-  gap: 2px;
-}
-
-.auth-brand strong {
-  color: #fff;
-
-  font-size: 18px;
-  letter-spacing: .04em;
-}
-
-.auth-brand span {
-  color: #666;
-
-  font-size: 9px;
-}
-
-.auth-copy h1 {
-  margin:
-    6px 0 8px;
-
-  color: #f5f5f5;
-
-  font-size: 26px;
-  letter-spacing: -.03em;
-}
-
-.auth-copy p:last-child {
-  color: #777;
-
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.auth-form {
-  display: flex;
-  flex-direction: column;
-
-  gap: 15px;
-
-  margin-top: 25px;
-}
-
-.auth-submit {
-  width: 100%;
-
-  min-height: 44px;
-}
-
-.auth-switch {
-  width: 100%;
-
-  margin-top: 14px;
-
-  padding: 9px;
-
-  border: 0;
-
-  background: transparent;
-
-  color: #888;
-
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.auth-switch:hover {
-  color: #fff;
-}
-
-.auth-message {
-  padding: 10px 12px;
-
-  border-radius: 8px;
-
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.auth-message.error {
-  border: 1px solid rgba(255,107,107,.2);
-  background: rgba(255,107,107,.06);
-  color: #ff8b8b;
-}
-
-.auth-message.success {
-  border: 1px solid rgba(74,222,128,.2);
-  background: rgba(74,222,128,.06);
-  color: #72e79a;
-}
-
-
-/* =========================================================
-   HORARI
-   ========================================================= */
-
-.schedule-page {
-  width: 100%;
-}
-
-.schedule-intro {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-
-  gap: 24px;
-
-  margin-bottom: 20px;
-}
-
-.schedule-tip {
-  max-width: 360px;
-
-  display: flex;
-  align-items: flex-start;
-
-  gap: 10px;
-
-  padding: 12px 14px;
-
-  border: 1px solid #222;
+  flex: 0 0 40px;
+  color: #bdb5ff;
+  background: rgba(139, 124, 255, 0.1);
+  border: 1px solid rgba(139, 124, 255, 0.18);
   border-radius: 10px;
-
-  background: #0b0b0b;
-
-  color: #858585;
-
-  font-size: 12px;
-  line-height: 1.5;
 }
 
-.schedule-tip > span:first-child {
-  color: #8b7cff;
-
-  flex: 0 0 auto;
+.schedule-import-card strong,
+.schedule-ai-note strong {
+  display: block;
+  margin-bottom: 4px;
 }
 
-.schedule-panel {
-  overflow-x: auto;
+.schedule-import-card p,
+.schedule-ai-note p {
+  margin: 0;
+  color: #8f8f8f;
+  line-height: 1.55;
 }
 
-.schedule-grid {
+.schedule-board {
   display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
 
-  grid-template-columns:
-    72px
-    repeat(
-      5,
-      minmax(150px, 1fr)
-    );
-
-  min-width: 820px;
-
-  border: 1px solid #222;
-  border-radius: 12px;
-
+.schedule-day {
+  min-width: 0;
   overflow: hidden;
-
   background: #0b0b0b;
-}
-
-.schedule-corner,
-.schedule-day-head,
-.schedule-time,
-.schedule-slot {
-  border-right: 1px solid #1d1d1d;
-  border-bottom: 1px solid #1d1d1d;
-}
-
-.schedule-corner {
-  min-height: 48px;
-
-  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
 }
 
 .schedule-day-head {
-  min-height: 48px;
-
   display: flex;
   align-items: center;
-  justify-content: center;
-
-  padding: 10px;
-
+  justify-content: space-between;
+  gap: 8px;
+  padding: 13px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   background: #101010;
+}
 
-  color: #f1f1f1;
-
-  font-size: 12px;
+.schedule-day-head span {
+  font-size: 13px;
   font-weight: 800;
 }
 
-.schedule-time {
-  min-height: 72px;
-
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-
-  padding: 11px 6px;
-
-  background: #0d0d0d;
-
-  color: #666;
-
+.schedule-day-head small {
+  color: #777;
   font-size: 10px;
-  font-weight: 700;
 }
 
-.schedule-slot {
-  min-height: 72px;
-
-  padding: 4px;
-
-  background: #0b0b0b;
-
-  cursor: pointer;
-
-  transition:
-    background .15s ease;
+.schedule-day-list {
+  min-height: 120px;
+  padding: 8px;
 }
 
-.schedule-slot:hover {
-  background:
-    rgba(
-      139,
-      124,
-      255,
-      .045
-    );
+.schedule-event-card {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 9px;
+  position: relative;
+  padding: 10px;
+  margin-bottom: 7px;
+  background: #121212;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 9px;
 }
 
-.schedule-event {
-  width: 100%;
+.schedule-event-card:last-child {
+  margin-bottom: 0;
+}
 
-  min-height: 62px;
-
+.schedule-event-time {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-
-  gap: 3px;
-
-  padding: 8px 9px;
-  margin: 0;
-
-  border: 1px solid
-    rgba(
-      139,
-      124,
-      255,
-      .22
-    );
-
-  border-radius: 8px;
-
-  background:
-    rgba(
-      139,
-      124,
-      255,
-      .11
-    );
-
-  color: #f1f1f1;
-
-  text-align: left;
-
-  cursor: pointer;
-
-  font: inherit;
-}
-
-.schedule-event:hover {
-  background:
-    rgba(
-      139,
-      124,
-      255,
-      .18
-    );
-}
-
-.schedule-event strong {
-  color: #eee;
-
-  font-size: 11px;
-  font-weight: 800;
-
-  line-height: 1.25;
-}
-
-.schedule-event span {
-  color: #9c9c9c;
-
+  gap: 2px;
   font-size: 10px;
-
-  line-height: 1.2;
 }
 
-.schedule-event small {
-  color: #777;
+.schedule-event-time strong {
+  color: #e5e5e5;
+}
 
+.schedule-event-time span {
+  color: #666;
+}
+
+.schedule-event-main {
+  min-width: 0;
+  padding-right: 52px;
+}
+
+.schedule-event-main strong,
+.schedule-event-main span,
+.schedule-event-main small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schedule-event-main strong {
+  font-size: 12px;
+}
+
+.schedule-event-main span {
+  margin-top: 2px;
+  color: #8f8f8f;
+  font-size: 10px;
+}
+
+.schedule-event-main small {
+  margin-top: 4px;
+  color: #666;
   font-size: 9px;
-
-  line-height: 1.2;
 }
 
-.schedule-event.type-class {
-  border-left:
-    3px solid #8b7cff;
-}
-
-.schedule-event.type-study {
-  border-left:
-    3px solid #5fb7a8;
-}
-
-.schedule-event.type-exam {
-  border-left:
-    3px solid #d67a8a;
-}
-
-.schedule-event.type-personal {
-  border-left:
-    3px solid #9b9b9b;
-}
-
-.schedule-legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-
-  gap: 18px;
-
-  margin-top: 14px;
-
+.schedule-type {
+  position: absolute;
+  left: 10px;
+  bottom: 8px;
   color: #777;
+  font-size: 9px;
+}
 
+.schedule-event-actions {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: flex;
+  gap: 3px;
+}
+
+.schedule-event-actions .icon-btn {
+  width: 27px;
+  height: 27px;
+}
+
+.danger-icon {
+  color: #d65b64;
+}
+
+.schedule-empty {
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #666;
+  text-align: center;
+  font-size: 10px;
+}
+
+.schedule-empty .btn {
+  min-height: 28px;
+  padding: 0 9px;
+  font-size: 10px;
+}
+
+.schedule-ai-note {
+  margin-top: 18px;
+  margin-bottom: 0;
+}
+
+.schedule-scan-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+  background: #101010;
+  border: 1px solid rgba(139, 124, 255, 0.15);
+  border-radius: 9px;
+  color: #aaa;
+}
+
+.schedule-scan-intro strong,
+.schedule-scan-intro span {
+  display: block;
+}
+
+.schedule-scan-intro strong {
+  color: #ddd;
+  margin-bottom: 3px;
+}
+
+.schedule-scan-intro span {
+  color: #777;
   font-size: 11px;
 }
 
-.schedule-legend span {
-  display: inline-flex;
-  align-items: center;
-
-  gap: 7px;
+.schedule-scan-table {
+  display: grid;
+  gap: 6px;
+  max-height: 48vh;
+  overflow: auto;
+  padding-right: 2px;
 }
 
-.legend-dot {
-  width: 7px;
-  height: 7px;
-
-  display: inline-block;
-
-  border-radius: 50%;
+.schedule-scan-row {
+  display: grid;
+  grid-template-columns: 1.05fr .75fr .75fr 1.5fr;
+  gap: 6px;
 }
 
-.legend-dot.class {
-  background: #8b7cff;
+.schedule-scan-row > * {
+  min-width: 0;
 }
 
-.legend-dot.study {
-  background: #5fb7a8;
+.schedule-scan-head {
+  padding: 0 8px 3px;
+  color: #666;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
 }
 
-.legend-dot.exam {
-  background: #d67a8a;
+.schedule-scan-row:not(.schedule-scan-head) input,
+.schedule-scan-row:not(.schedule-scan-head) select {
+  min-height: 38px;
+  width: 100%;
+  padding: 0 9px;
+  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  color: #ddd;
+  font-size: 11px;
 }
 
-.legend-dot.personal {
-  background: #9b9b9b;
+.schedule-scan-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 11px;
+  color: #777;
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 1.45;
 }
 
-.danger-btn {
-  color: #ff6b6b !important;
+@media (max-width: 1050px) {
+  .schedule-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.danger-btn:hover {
-  background:
-    rgba(
-      255,
-      107,
-      107,
-      .08
-    ) !important;
-
-  color: #ff8585 !important;
-}
-
-
-/* =========================================================
-   SELECCIÓN
-   ========================================================= */
-
-::selection {
-  background: #ffffff;
-  color: #050505;
-}
-
-
-/* =========================================================
-   SCROLLBAR
-   ========================================================= */
-
-::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
-}
-
-::-webkit-scrollbar-track {
-  background: #080808;
-}
-
-::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-
-  background: #2b2b2b;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #3a3a3a;
-}
-
-
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
-
-@media (max-width: 1100px) {
-
-  .sidebar {
-    width: 220px;
+@media (max-width: 680px) {
+  .schedule-toolbar-actions {
+    width: 100%;
+    justify-content: stretch;
   }
 
-  .main {
-    width: calc(100% - 220px);
-
-    margin-left: 220px;
-
-    padding-left: 24px;
-    padding-right: 24px;
+  .schedule-toolbar-actions .btn {
+    flex: 1;
   }
 
-  .stats-grid {
-    grid-template-columns:
-      repeat(
-        2,
-        minmax(0, 1fr)
-      );
-  }
-
-  .two-col {
+  .schedule-board {
     grid-template-columns: 1fr;
   }
 
-  .planner {
-    grid-template-columns:
-      repeat(
-        7,
-        145px
-      );
+  .schedule-scan-row {
+    grid-template-columns: 1fr 1fr;
   }
 
-}
-
-
-@media (max-width: 800px) {
-
-  .schedule-intro {
-    align-items: flex-start;
-
-    flex-direction: column;
-  }
-
-  .schedule-tip {
-    max-width: none;
-  }
-
-  .schedule-grid {
-    grid-template-columns:
-      58px
-      repeat(
-        5,
-        minmax(135px, 1fr)
-      );
-  }
-
-}
-
-
-@media (max-width: 760px) {
-
-  .app-shell {
-    display: block;
-  }
-
-  .sidebar {
-    position: static;
-
-    width: 100%;
-
-    min-height: auto;
-
-    border-right: 0;
-    border-bottom: 1px solid #1d1d1d;
-  }
-
-  .brand {
-    min-height: 72px;
-  }
-
-  .nav {
-    display: grid;
-
-    grid-template-columns:
-      repeat(4, 1fr);
-
-    padding: 10px;
-  }
-
-  .nav-item {
-    justify-content: center;
-
-    padding:
-      0 5px;
-  }
-
-  .nav-item span {
+  .schedule-scan-head {
     display: none;
   }
-
-  .sidebar-bottom {
-    display: none;
-  }
-
-  .main {
-    width: 100%;
-
-    margin-left: 0;
-
-    padding:
-      0 15px 35px;
-  }
-
-  .topbar {
-    min-height: 78px;
-  }
-
-  .topbar h1 {
-    font-size: 20px;
-  }
-
-  .top-actions {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
-
-  .hero {
-    align-items: flex-start;
-
-    flex-direction: column;
-  }
-
-  .hero h2 {
-    font-size: 23px;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .task-card {
-    align-items: flex-start;
-
-    flex-direction: column;
-  }
-
-  .task-actions {
-    width: 100%;
-
-    justify-content: flex-end;
-  }
-
-  .exam-card {
-    align-items: flex-start;
-
-    flex-direction: column;
-  }
-
-  .exam-date {
-    width: 100%;
-  }
-
-  .exam-actions {
-    width: 100%;
-
-    justify-content: flex-end;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .form-grid .full {
-    grid-column: auto;
-  }
-
-  .chat-panel {
-    min-height: 580px;
-  }
-
-  .chat-messages {
-    min-height: 450px;
-  }
-
-}
-
-
-@media (max-width: 480px) {
-
-  .brand-copy span {
-    display: none;
-  }
-
-  .school-logo {
-    width: 34px;
-    height: 34px;
-  }
-
-  .nav {
-    grid-template-columns:
-      repeat(4, 1fr);
-  }
-
-  .topbar {
-    gap: 10px;
-  }
-
-  .topbar h1 {
-    font-size: 18px;
-  }
-
-  .top-actions .btn {
-    padding:
-      0 10px;
-  }
-
-  .hero,
-  .panel {
-    padding: 15px;
-  }
-
-  .hero h2 {
-    font-size: 21px;
-  }
-
-  .stat-card {
-    min-height: 95px;
-  }
-
-  .message-bubble {
-    max-width: 90%;
-  }
-
-  .modal {
-    padding: 17px;
-    border-radius: 14px;
-  }
-
-  .modal-actions {
-    flex-wrap: wrap;
-  }
-
-  .modal-actions-right {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
 }
