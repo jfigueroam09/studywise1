@@ -9,7 +9,7 @@ const SUPABASE_URL =
   'https://tzyslkglsywfiwuhtgrj.supabase.co';
 
 const SUPABASE_PUBLISHABLE_KEY =
-  'PEGA_AQUI_TU_PUBLISHABLE_KEY';
+  'sb_publishable_2SIxbdP7otKw74QV4s4J5g_K39-PjkG';
 
 const supabase = createClient(
   SUPABASE_URL,
@@ -38,7 +38,7 @@ const defaultState = {
 };
 
 
-let state = loadState();
+let state = structuredClone(defaultState);
 
 let currentPage = 'dashboard';
 
@@ -59,39 +59,179 @@ let pendingScheduleEvents = [];
    LOCAL STORAGE
    ========================================================= */
 
-function loadState() {
+function normaliseState(raw = {}) {
+
+  const safe =
+    raw && typeof raw === 'object'
+      ? raw
+      : {};
+
+  return {
+    ...structuredClone(defaultState),
+
+    ...safe,
+
+    tasks:
+      Array.isArray(safe.tasks)
+        ? safe.tasks
+        : [],
+
+    exams:
+      Array.isArray(safe.exams)
+        ? safe.exams
+        : [],
+
+    scheduleEvents:
+      Array.isArray(safe.scheduleEvents)
+        ? safe.scheduleEvents
+        : [],
+
+    chat:
+      Array.isArray(safe.chat)
+        ? safe.chat
+        : [],
+
+    settings: {
+      ...structuredClone(
+        defaultState.settings
+      ),
+
+      ...(
+        safe.settings &&
+        typeof safe.settings === 'object'
+          ? safe.settings
+          : {}
+      )
+    }
+  };
+
+}
+
+
+function storageKeyForUser(userId) {
+
+  return userId
+    ? `${STORAGE_KEY}:user:${userId}`
+    : STORAGE_KEY;
+
+}
+
+
+function readStorage(key) {
 
   try {
 
     const raw =
-      localStorage.getItem(
-        STORAGE_KEY
-      );
+      localStorage.getItem(key);
 
-    if (!raw) {
-      return structuredClone(defaultState);
-    }
-
-    return {
-      ...structuredClone(defaultState),
-      ...JSON.parse(raw)
-    };
+    return raw
+      ? normaliseState(
+          JSON.parse(raw)
+        )
+      : null;
 
   } catch {
 
-    return structuredClone(defaultState);
+    return null;
 
   }
 
 }
 
 
+function loadState() {
+
+  return (
+    readStorage(STORAGE_KEY) ||
+    structuredClone(defaultState)
+  );
+
+}
+
+
+function loadUserState(userId) {
+
+  const userKey =
+    storageKeyForUser(userId);
+
+  const existing =
+    readStorage(userKey);
+
+  if (existing) {
+
+    return existing;
+
+  }
+
+
+  /*
+   * Migra les dades antigues
+   * d'una versió anterior de TRIA.
+   */
+
+  const legacy =
+    readStorage(STORAGE_KEY);
+
+  if (legacy) {
+
+    try {
+
+      localStorage.setItem(
+        userKey,
+        JSON.stringify(legacy)
+      );
+
+    } catch {
+
+      /*
+       * Si el navegador bloqueja
+       * l'emmagatzematge, continuem
+       * amb les dades en memòria.
+       */
+
+    }
+
+    return legacy;
+
+  }
+
+
+  return structuredClone(
+    defaultState
+  );
+
+}
+
+
 function saveState() {
 
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(state)
-  );
+  state =
+    normaliseState(state);
+
+  try {
+
+    const key =
+      currentUser
+        ? storageKeyForUser(
+            currentUser.id
+          )
+        : STORAGE_KEY;
+
+    localStorage.setItem(
+      key,
+      JSON.stringify(
+        normaliseState(state)
+      )
+    );
+
+  } catch (error) {
+
+    console.warn(
+      'No s’ha pogut desar l’estat local de TRIA.',
+      error
+    );
+
+  }
 
 }
 
@@ -110,12 +250,28 @@ async function initAuth() {
     } =
       await supabase.auth.getSession();
 
+
     if (error) {
+
       console.error(error);
+
     }
 
+
     currentUser =
-      data?.session?.user || null;
+      data?.session?.user ||
+      null;
+
+
+    state =
+      currentUser
+        ? loadUserState(
+            currentUser.id
+          )
+        : structuredClone(
+            defaultState
+          );
+
 
   } catch (error) {
 
@@ -126,17 +282,36 @@ async function initAuth() {
 
     currentUser = null;
 
+    state =
+      structuredClone(
+        defaultState
+      );
+
   }
+
 
   authReady = true;
 
   render();
 
+
   supabase.auth.onAuthStateChange(
     (_event, session) => {
 
       currentUser =
-        session?.user || null;
+        session?.user ||
+        null;
+
+
+      state =
+        currentUser
+          ? loadUserState(
+              currentUser.id
+            )
+          : structuredClone(
+              defaultState
+            );
+
 
       authReady = true;
 
@@ -152,26 +327,35 @@ async function handleAuth(event) {
 
   event.preventDefault();
 
+
   const email =
     document
-      .querySelector('#auth-email')
+      .querySelector(
+        '#auth-email'
+      )
       ?.value
       .trim();
 
+
   const password =
     document
-      .querySelector('#auth-password')
+      .querySelector(
+        '#auth-password'
+      )
       ?.value;
+
 
   const errorBox =
     document.querySelector(
       '#auth-error'
     );
 
+
   const successBox =
     document.querySelector(
       '#auth-success'
     );
+
 
   const button =
     document.querySelector(
@@ -179,7 +363,21 @@ async function handleAuth(event) {
     );
 
 
-  if (!email || !password) {
+  if (
+    !errorBox ||
+    !successBox ||
+    !button
+  ) {
+
+    return;
+
+  }
+
+
+  if (
+    !email ||
+    !password
+  ) {
 
     errorBox.textContent =
       'Escriu el correu i la contrasenya.';
@@ -201,7 +399,9 @@ async function handleAuth(event) {
     'hidden'
   );
 
+
   button.disabled = true;
+
 
   button.textContent =
     authMode === 'login'
@@ -224,8 +424,11 @@ async function handleAuth(event) {
             password
           });
 
+
       if (error) {
+
         throw error;
+
       }
 
     } else {
@@ -240,9 +443,13 @@ async function handleAuth(event) {
             password
           });
 
+
       if (error) {
+
         throw error;
+
       }
+
 
       if (!data.session) {
 
@@ -253,10 +460,13 @@ async function handleAuth(event) {
           'hidden'
         );
 
+
         button.disabled = false;
+
 
         button.textContent =
           'Crear compte';
+
 
         return;
 
@@ -277,6 +487,7 @@ async function handleAuth(event) {
 
     button.disabled = false;
 
+
     button.textContent =
       authMode === 'login'
         ? 'Iniciar sessió'
@@ -291,8 +502,10 @@ function authErrorMessage(error) {
 
   const message =
     String(
-      error?.message || ''
+      error?.message ||
+      ''
     );
+
 
   const lower =
     message.toLowerCase();
@@ -303,7 +516,11 @@ function authErrorMessage(error) {
       'invalid login credentials'
     )
   ) {
-    return 'El correu o la contrasenya no són correctes.';
+
+    return (
+      'El correu o la contrasenya no són correctes.'
+    );
+
   }
 
 
@@ -312,7 +529,11 @@ function authErrorMessage(error) {
       'email not confirmed'
     )
   ) {
-    return 'Primer has de confirmar el teu correu electrònic.';
+
+    return (
+      'Primer has de confirmar el teu correu electrònic.'
+    );
+
   }
 
 
@@ -321,7 +542,11 @@ function authErrorMessage(error) {
       'user already registered'
     )
   ) {
-    return 'Aquest correu ja té un compte.';
+
+    return (
+      'Aquest correu ja té un compte.'
+    );
+
   }
 
 
@@ -330,7 +555,11 @@ function authErrorMessage(error) {
       'password should be at least'
     )
   ) {
-    return 'La contrasenya ha de tenir almenys 6 caràcters.';
+
+    return (
+      'La contrasenya ha de tenir almenys 6 caràcters.'
+    );
+
   }
 
 
@@ -356,7 +585,19 @@ function toggleAuthMode() {
 
 async function logout() {
 
-  await supabase.auth.signOut();
+  try {
+
+    await supabase.auth.signOut();
+
+  } catch (error) {
+
+    console.error(
+      'Error tancant sessió:',
+      error
+    );
+
+  }
+
 
   currentUser = null;
 
@@ -367,6 +608,12 @@ async function logout() {
 
   currentPage =
     'dashboard';
+
+  modalMode = null;
+
+  editingId = null;
+
+  pendingScheduleEvents = [];
 
   render();
 
@@ -391,11 +638,26 @@ function uid(prefix = 'id') {
 function esc(value = '') {
 
   return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
+    .replaceAll(
+      '&',
+      '&amp;'
+    )
+    .replaceAll(
+      '<',
+      '&lt;'
+    )
+    .replaceAll(
+      '>',
+      '&gt;'
+    )
+    .replaceAll(
+      '"',
+      '&quot;'
+    )
+    .replaceAll(
+      "'",
+      '&#039;'
+    );
 
 }
 
@@ -408,12 +670,16 @@ function todayISO() {
   const offset =
     date.getTimezoneOffset();
 
+
   return new Date(
     date.getTime() -
     offset * 60000
   )
     .toISOString()
-    .slice(0, 10);
+    .slice(
+      0,
+      10
+    );
 
 }
 
@@ -421,17 +687,22 @@ function todayISO() {
 function daysUntil(value) {
 
   if (!value) {
+
     return 999;
+
   }
+
 
   const target =
     new Date(
       `${value}T23:59:59`
     );
 
+
   return Math.ceil(
     (
-      target - Date.now()
+      target -
+      Date.now()
     ) /
     86400000
   );
@@ -442,21 +713,28 @@ function daysUntil(value) {
 function formatDate(value) {
 
   if (!value) {
+
     return '—';
+
   }
+
 
   const date =
     new Date(
       `${value}T12:00:00`
     );
 
+
   if (
     Number.isNaN(
       date.getTime()
     )
   ) {
+
     return value;
+
   }
+
 
   return new Intl.DateTimeFormat(
     'ca-ES',
@@ -473,21 +751,28 @@ function formatDate(value) {
 function formatShortDate(value) {
 
   if (!value) {
+
     return '—';
+
   }
+
 
   const date =
     new Date(
       `${value}T12:00:00`
     );
 
+
   if (
     Number.isNaN(
       date.getTime()
     )
   ) {
+
     return value;
+
   }
+
 
   return new Intl.DateTimeFormat(
     'ca-ES',
@@ -503,10 +788,19 @@ function formatShortDate(value) {
 function statusLabel(status) {
 
   return {
-    pending: 'Pendent',
-    inprogress: 'En curs',
-    completed: 'Completada'
-  }[status] || 'Pendent';
+
+    pending:
+      'Pendent',
+
+    inprogress:
+      'En curs',
+
+    completed:
+      'Completada'
+
+  }[
+    status
+  ] || 'Pendent';
 
 }
 
@@ -514,11 +808,22 @@ function statusLabel(status) {
 function difficultyLabel(value) {
 
   return {
-    1: 'Baixa',
-    2: 'Baixa',
-    3: 'Mitjana',
-    4: 'Alta',
-    5: 'Alta'
+
+    1:
+      'Baixa',
+
+    2:
+      'Baixa',
+
+    3:
+      'Mitjana',
+
+    4:
+      'Alta',
+
+    5:
+      'Alta'
+
   }[
     Number(value)
   ] || 'Mitjana';
@@ -530,7 +835,10 @@ function difficultyLabel(value) {
    ICONES
    ========================================================= */
 
-function icon(name, size = 18) {
+function icon(
+  name,
+  size = 18
+) {
 
   const paths = {
 
@@ -596,6 +904,7 @@ function icon(name, size = 18) {
 
   };
 
+
   return `
     <svg
       class="icon"
@@ -616,34 +925,33 @@ function icon(name, size = 18) {
 }
 
 /* =========================================================
-   LOGIN
+   LOGIN / REGISTRE
    ========================================================= */
 
 function authView() {
 
-  const login =
+  const isLogin =
     authMode === 'login';
 
   return `
+    <main class="auth-screen">
 
-    <div class="auth-screen">
-
-      <div class="auth-card">
+      <section class="auth-card">
 
         <div class="auth-brand">
 
           <div class="auth-mark">
-            ${icon('sparkles', 24)}
+            ${icon('sparkles', 19)}
           </div>
 
           <div class="auth-brand-text">
 
             <strong>
-              TRIA
+              ${APP_NAME}
             </strong>
 
             <span>
-              Fet per Freddy Figueroa
+              ${APP_AUTHOR}
             </span>
 
           </div>
@@ -654,23 +962,21 @@ function authView() {
         <div class="auth-heading">
 
           <p class="eyebrow">
-            ORGANITZACIÓ ACADÈMICA
+            ${isLogin ? 'BENvingut' : 'NOU COMPTE'}
           </p>
 
           <h1>
             ${
-              login
-                ? 'Benvingut de nou'
-                : 'Crea el teu compte'
+              isLogin
+                ? 'Continua amb el teu estudi.'
+                : 'Crea el teu espai d’estudi.'
             }
           </h1>
 
           <p>
-            ${
-              login
-                ? 'Continua organitzant el teu estudi amb TRIA.'
-                : 'Comença a organitzar tasques, exàmens i estudi.'
-            }
+            Organitza tasques, exàmens,
+            horari i temps d’estudi des d’un
+            únic lloc.
           </p>
 
         </div>
@@ -689,7 +995,7 @@ function authView() {
               id="auth-email"
               type="email"
               autocomplete="email"
-              placeholder="tu@exemple.com"
+              placeholder="tu@correu.com"
               required
             >
 
@@ -704,7 +1010,7 @@ function authView() {
               id="auth-password"
               type="password"
               autocomplete="${
-                login
+                isLogin
                   ? 'current-password'
                   : 'new-password'
               }"
@@ -719,21 +1025,23 @@ function authView() {
           <div
             id="auth-error"
             class="auth-message hidden"
+            role="alert"
           ></div>
 
 
           <div
             id="auth-success"
             class="auth-message success hidden"
+            role="status"
           ></div>
 
 
           <button
-            class="btn primary auth-submit"
             type="submit"
+            class="btn primary auth-submit"
           >
             ${
-              login
+              isLogin
                 ? 'Iniciar sessió'
                 : 'Crear compte'
             }
@@ -746,7 +1054,7 @@ function authView() {
 
           <span>
             ${
-              login
+              isLogin
                 ? 'Encara no tens compte?'
                 : 'Ja tens un compte?'
             }
@@ -758,7 +1066,7 @@ function authView() {
             data-action="toggle-auth"
           >
             ${
-              login
+              isLogin
                 ? 'Crear compte'
                 : 'Iniciar sessió'
             }
@@ -766,10 +1074,9 @@ function authView() {
 
         </div>
 
-      </div>
+      </section>
 
-    </div>
-
+    </main>
   `;
 
 }
@@ -838,14 +1145,37 @@ function navItems() {
 
 function pageTitle() {
 
-  const item =
-    navItems().find(
-      item =>
-        item[0] === currentPage
-    );
+  const titles = {
+
+    dashboard:
+      'Tauler',
+
+    tasks:
+      'Tasques',
+
+    exams:
+      'Exàmens',
+
+    schedule:
+      'Horari',
+
+    planner:
+      'Planificador',
+
+    chat:
+      "IA d'estudi",
+
+    progress:
+      'Progrés',
+
+    settings:
+      'Avaluació'
+
+  };
+
 
   return (
-    item?.[1] ||
+    titles[currentPage] ||
     'Tauler'
   );
 
@@ -853,84 +1183,163 @@ function pageTitle() {
 
 
 /* =========================================================
-   LAYOUT
+   LAYOUT PRINCIPAL
    ========================================================= */
 
-function layout() {
+function layout(content) {
+
+  const navigation =
+    navItems()
+      .map(
+        ([
+          id,
+          label,
+          iconName
+        ]) => `
+          <button
+            type="button"
+            class="nav-item ${
+              currentPage === id
+                ? 'active'
+                : ''
+            }"
+            data-page="${id}"
+          >
+
+            ${icon(iconName, 16)}
+
+            <span>
+              ${esc(label)}
+            </span>
+
+          </button>
+        `
+      )
+      .join('');
+
+
+  const pageAction = {
+
+    tasks: `
+      <button
+        type="button"
+        class="btn primary"
+        data-action="new-task"
+      >
+        ${icon('plus', 16)}
+        Nova tasca
+      </button>
+    `,
+
+    exams: `
+      <button
+        type="button"
+        class="btn primary"
+        data-action="new-exam"
+      >
+        ${icon('plus', 16)}
+        Nou examen
+      </button>
+    `,
+
+    schedule: `
+      <button
+        type="button"
+        class="btn secondary"
+        data-action="scroll-schedule-upload"
+      >
+        ${icon('camera', 15)}
+        Analitzar horari
+      </button>
+    `,
+
+    planner: `
+      <button
+        type="button"
+        class="btn primary"
+        data-action="recalculate-plan"
+      >
+        ${icon('sparkles', 15)}
+        Crear pla amb IA
+      </button>
+    `,
+
+    chat: `
+      <div class="ai-top-status">
+        <span class="status-dot"></span>
+        <span>Gemini connectat</span>
+      </div>
+    `,
+
+    dashboard: `
+      <button
+        type="button"
+        class="btn primary"
+        data-action="recalculate-plan"
+      >
+        ${icon('sparkles', 15)}
+        Recalcular amb IA
+      </button>
+    `
+
+  }[currentPage] || '';
+
 
   return `
-
     <div class="app-shell">
 
 
-      <aside class="sidebar">
+      <!-- ================================================
+           SIDEBAR
+           ================================================ -->
 
+      <aside class="sidebar">
 
         <div class="brand">
 
           <div class="brand-mark">
-            ${icon('sparkles', 21)}
+            ${icon('sparkles', 17)}
           </div>
+
 
           <div class="brand-copy">
 
             <strong>
-              TRIA
+              ${APP_NAME}
             </strong>
 
             <span>
-              Fet per Freddy Figueroa
+              ${APP_AUTHOR}
             </span>
 
           </div>
 
+
           <img
             class="school-logo"
             src="/logo-institut.png"
-            alt="Logo de l'institut"
+            alt=""
+            aria-hidden="true"
           >
 
         </div>
 
 
-        <nav class="nav">
+        <nav
+          class="nav"
+          aria-label="Navegació principal"
+        >
 
-          ${navItems()
-            .map(
-              ([id, label, ico]) => `
-
-                <button
-                  class="nav-item ${
-                    currentPage === id
-                      ? 'active'
-                      : ''
-                  }"
-                  data-page="${id}"
-                >
-
-                  ${icon(ico)}
-
-                  <span>
-                    ${label}
-                  </span>
-
-                </button>
-
-              `
-            )
-            .join('')}
+          ${navigation}
 
         </nav>
 
 
         <div class="sidebar-bottom">
 
-
           <div class="ai-status">
 
-            <span
-              class="status-dot"
-            ></span>
+            <span class="status-dot"></span>
 
             <div>
 
@@ -948,17 +1357,21 @@ function layout() {
 
 
           <button
+            type="button"
             class="logout-btn"
             data-action="logout"
           >
             Tancar sessió
           </button>
 
-
         </div>
 
       </aside>
 
+
+      <!-- ================================================
+           MAIN
+           ================================================ -->
 
       <main class="main">
 
@@ -968,11 +1381,11 @@ function layout() {
           <div>
 
             <p class="eyebrow">
-              TRIA
+              ${APP_NAME}
             </p>
 
             <h1>
-              ${pageTitle()}
+              ${esc(pageTitle())}
             </h1>
 
           </div>
@@ -980,34 +1393,7 @@ function layout() {
 
           <div class="top-actions">
 
-            ${
-              currentPage === 'tasks'
-                ? `
-                  <button
-                    class="btn primary"
-                    data-action="new-task"
-                  >
-                    ${icon('plus', 17)}
-                    Nova tasca
-                  </button>
-                `
-                : ''
-            }
-
-
-            ${
-              currentPage === 'exams'
-                ? `
-                  <button
-                    class="btn primary"
-                    data-action="new-exam"
-                  >
-                    ${icon('plus', 17)}
-                    Nou examen
-                  </button>
-                `
-                : ''
-            }
+            ${pageAction}
 
           </div>
 
@@ -1015,15 +1401,25 @@ function layout() {
 
 
         <section id="content">
+          ${content}
         </section>
 
 
-        ${buildModalHtml()}
-
       </main>
 
-    </div>
 
+      <!-- ================================================
+           MODAL
+           ================================================ -->
+
+      <div
+        id="modal"
+        class="modal-backdrop hidden"
+        aria-hidden="true"
+      ></div>
+
+
+    </div>
   `;
 
 }
@@ -1033,299 +1429,766 @@ function layout() {
    MODAL
    ========================================================= */
 
-function buildModalHtml() {
+function buildModalHtml(
+  title,
+  body,
+  actions = ''
+) {
 
   return `
-
     <div
-      id="modal"
-      class="modal-backdrop hidden"
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
     >
 
-      <div class="modal">
+      <div class="modal-head">
 
-        <div class="modal-head">
+        <div>
 
-          <div>
+          <p class="eyebrow">
+            TRIA
+          </p>
 
-            <p
-              class="eyebrow"
-              id="modal-eyebrow"
-            >
-              TRIA
-            </p>
-
-            <h2
-              id="modal-title"
-            >
-              Nova tasca
-            </h2>
-
-          </div>
-
-
-          <button
-            class="icon-btn"
-            data-action="close-modal"
-            aria-label="Tancar"
-          >
-            ${icon('close')}
-          </button>
+          <h2 id="modal-title">
+            ${esc(title)}
+          </h2>
 
         </div>
 
 
-        <form
-          id="modal-form"
-        ></form>
+        <button
+          type="button"
+          class="icon-btn"
+          data-action="close-modal"
+          aria-label="Tancar"
+        >
+          ${icon('close', 17)}
+        </button>
 
       </div>
 
-    </div>
 
+      <div class="modal-body">
+
+        ${body}
+
+      </div>
+
+
+      ${
+        actions
+          ? `
+            <div class="modal-actions">
+              ${actions}
+            </div>
+          `
+          : ''
+      }
+
+    </div>
   `;
 
 }
 
 
 /* =========================================================
-   COMPONENTS
+   TARGETA D’ESTADÍSTICA
    ========================================================= */
 
 function statCard(
+  iconName,
   label,
   value,
-  note,
-  ico
+  detail = ''
 ) {
 
   return `
-
-    <div class="stat-card">
+    <article class="stat-card">
 
       <div class="stat-icon">
-        ${icon(ico, 20)}
+        ${icon(iconName, 16)}
       </div>
+
 
       <div>
 
         <span>
-          ${label}
+          ${esc(label)}
         </span>
 
         <strong>
-          ${value}
+          ${esc(value)}
         </strong>
 
-        <small>
-          ${note}
-        </small>
+        ${
+          detail
+            ? `
+              <small>
+                ${esc(detail)}
+              </small>
+            `
+            : ''
+        }
 
       </div>
 
-    </div>
-
+    </article>
   `;
 
 }
 
 
+/* =========================================================
+   ESTAT BUIT
+   ========================================================= */
+
 function emptyState(
   title,
-  text
+  description,
+  action = ''
 ) {
 
   return `
-
     <div class="empty large">
+
+      ${icon('sparkles', 20)}
 
       <strong>
         ${esc(title)}
       </strong>
 
       <span>
-        ${esc(text)}
+        ${esc(description)}
       </span>
 
-    </div>
+      ${
+        action
+          ? `
+            <div style="margin-top:12px;">
+              ${action}
+            </div>
+          `
+          : ''
+      }
 
+    </div>
   `;
 
 }
 
+
 /* =========================================================
-   TAULER
+   DATA AUXILIAR
+   ========================================================= */
+
+function sortTasks(tasks) {
+
+  return [...tasks].sort(
+    (a, b) => {
+
+      const aDate =
+        a?.dueDate ||
+        '9999-12-31';
+
+      const bDate =
+        b?.dueDate ||
+        '9999-12-31';
+
+
+      if (
+        aDate !== bDate
+      ) {
+
+        return aDate.localeCompare(
+          bDate
+        );
+
+      }
+
+
+      return (
+        Number(
+          b?.difficulty || 0
+        ) -
+        Number(
+          a?.difficulty || 0
+        )
+      );
+
+    }
+  );
+
+}
+
+
+function sortExams(exams) {
+
+  return [...exams].sort(
+    (a, b) => {
+
+      const aDate =
+        a?.date ||
+        '9999-12-31';
+
+      const bDate =
+        b?.date ||
+        '9999-12-31';
+
+
+      return aDate.localeCompare(
+        bDate
+      );
+
+    }
+  );
+
+}
+
+
+function pendingTasks() {
+
+  return sortTasks(
+    state.tasks.filter(
+      task =>
+        task.status !==
+        'completed'
+    )
+  );
+
+}
+
+
+function completedTasks() {
+
+  return state.tasks.filter(
+    task =>
+      task.status ===
+      'completed'
+  );
+
+}
+
+
+function upcomingExams() {
+
+  return sortExams(
+    state.exams.filter(
+      exam =>
+        daysUntil(
+          exam.date
+        ) >= 0
+    )
+  );
+
+}
+
+
+function totalTaskMinutes(
+  tasks = state.tasks
+) {
+
+  return tasks.reduce(
+    (total, task) =>
+      total +
+      Number(
+        task.estimatedMinutes ||
+        0
+      ),
+    0
+  );
+
+}
+
+
+function completedTaskMinutes() {
+
+  return completedTasks().reduce(
+    (total, task) =>
+      total +
+      Number(
+        task.estimatedMinutes ||
+        0
+      ),
+    0
+  );
+
+}
+
+
+function progressPercent() {
+
+  const total =
+    state.tasks.length;
+
+  if (!total) {
+
+    return 0;
+
+  }
+
+
+  return Math.round(
+    (
+      completedTasks().length /
+      total
+    ) *
+    100
+  );
+
+}
+
+
+/* =========================================================
+   SAFE DATE HELPERS
+   ========================================================= */
+
+function dateFromISO(
+  value
+) {
+
+  if (!value) {
+
+    return null;
+
+  }
+
+
+  const date =
+    new Date(
+      `${value}T12:00:00`
+    );
+
+
+  return Number.isNaN(
+    date.getTime()
+  )
+    ? null
+    : date;
+
+}
+
+
+function weekdayName(
+  date
+) {
+
+  if (!(date instanceof Date)) {
+
+    return '';
+
+  }
+
+
+  return new Intl.DateTimeFormat(
+    'ca-ES',
+    {
+      weekday: 'long'
+    }
+  ).format(date);
+
+}
+
+
+function isoDay(
+  date
+) {
+
+  if (!(date instanceof Date)) {
+
+    return '';
+
+  }
+
+
+  const year =
+    date.getFullYear();
+
+  const month =
+    String(
+      date.getMonth() + 1
+    ).padStart(2, '0');
+
+  const day =
+    String(
+      date.getDate()
+    ).padStart(2, '0');
+
+
+  return `${year}-${month}-${day}`;
+
+}
+
+
+/* =========================================================
+   DOM HELPERS
+   ========================================================= */
+
+function getRoot() {
+
+  return document.querySelector(
+    '#root'
+  );
+
+}
+
+
+function getModal() {
+
+  return document.querySelector(
+    '#modal'
+  );
+
+}
+
+
+function setModal(
+  html
+) {
+
+  const modal =
+    getModal();
+
+  if (!modal) {
+
+    return;
+
+  }
+
+
+  modal.innerHTML =
+    html;
+
+  modal.classList.remove(
+    'hidden'
+  );
+
+  modal.setAttribute(
+    'aria-hidden',
+    'false'
+  );
+
+}
+
+
+function closeModal() {
+
+  const modal =
+    getModal();
+
+  if (!modal) {
+
+    return;
+
+  }
+
+
+  modal.classList.add(
+    'hidden'
+  );
+
+  modal.setAttribute(
+    'aria-hidden',
+    'true'
+  );
+
+  modal.innerHTML =
+    '';
+
+  modalMode = null;
+
+  editingId = null;
+
+}
+
+
+function scrollToElement(
+  selector
+) {
+
+  const element =
+    document.querySelector(
+      selector
+    );
+
+  if (!element) {
+
+    return;
+
+  }
+
+
+  element.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start'
+  });
+
+}
+
+
+/* =========================================================
+   TOAST
+   ========================================================= */
+
+function showToast(
+  message,
+  type = 'success'
+) {
+
+  const old =
+    document.querySelector(
+      '.tria-toast'
+    );
+
+  if (old) {
+
+    old.remove();
+
+  }
+
+
+  const toast =
+    document.createElement(
+      'div'
+    );
+
+
+  toast.className =
+    `tria-toast ${type}`;
+
+
+  toast.textContent =
+    message;
+
+
+  document.body.appendChild(
+    toast
+  );
+
+
+  requestAnimationFrame(
+    () => {
+      toast.classList.add(
+        'show'
+      );
+    }
+  );
+
+
+  setTimeout(
+    () => {
+
+      toast.classList.remove(
+        'show'
+      );
+
+
+      setTimeout(
+        () => {
+          toast.remove();
+        },
+        180
+      );
+
+    },
+    2600
+  );
+
+}
+
+
+/* =========================================================
+   TECLAT
+   ========================================================= */
+
+document.addEventListener(
+  'keydown',
+  event => {
+
+    if (
+      event.key ===
+      'Escape'
+    ) {
+
+      const modal =
+        getModal();
+
+      if (
+        modal &&
+        !modal.classList.contains(
+          'hidden'
+        )
+      ) {
+
+        closeModal();
+
+      }
+
+    }
+
+  }
+);
+
+/* =========================================================
+   PARTE 3 · DASHBOARD
    ========================================================= */
 
 const teacherQuotes = [
-
-  "Com un reforç de l'aprenentatge, no com un aprenentatge. Hi ha d'haver un filtre humà.",
-
-  "Tant per aprofundir sobre un tema com a l'hora de resoldre dubtes.",
-
-  "De manera ètica i responsable.",
-
-  "Com ajuda a fomentar el pensament crític.",
-
-  "Haurien d'aprendre les seves limitacions i contraindicacions i no haurien de recórrer a la IA com a primera opció."
-
+  'La constància acostuma a donar més resultat que estudiar-ho tot de cop.',
+  'Quan organitzes el temps, també guanyes tranquil·litat.',
+  'No cal fer-ho tot avui: cal saber què toca ara.',
+  'Un bon pla deixa espai per estudiar i també per descansar.'
 ];
 
 
-const teacherQuote =
-  teacherQuotes[
-    Math.floor(
-      Math.random() *
-      teacherQuotes.length
+function tomorrowISO() {
+
+  const date = new Date();
+
+  date.setDate(
+    date.getDate() + 1
+  );
+
+  return isoDay(date);
+
+}
+
+
+function formatTomorrowLabel() {
+
+  const date =
+    dateFromISO(
+      tomorrowISO()
+    );
+
+  if (!date) {
+
+    return 'Demà';
+
+  }
+
+  const weekday =
+    new Intl.DateTimeFormat(
+      'ca-ES',
+      {
+        weekday: 'long'
+      }
+    ).format(date);
+
+  const day =
+    date.getDate();
+
+  const month =
+    new Intl.DateTimeFormat(
+      'ca-ES',
+      {
+        month: 'long'
+      }
+    ).format(date);
+
+  return `${
+    weekday.charAt(0).toUpperCase() +
+    weekday.slice(1)
+  }, ${day} d’${month}`;
+
+}
+
+
+function tomorrowSchedule() {
+
+  const tomorrow =
+    tomorrowISO();
+
+  return state.scheduleEvents
+    .filter(
+      event =>
+        event &&
+        event.date === tomorrow
     )
+    .sort(
+      (a, b) =>
+        String(
+          a.startTime || ''
+        ).localeCompare(
+          String(
+            b.startTime || ''
+          )
+        )
+    );
+
+}
+
+
+function tomorrowTasks() {
+
+  const tomorrow =
+    tomorrowISO();
+
+  return sortTasks(
+    state.tasks.filter(
+      task =>
+        task.status !== 'completed' &&
+        task.dueDate === tomorrow
+    )
+  );
+
+}
+
+
+function dashboardTomorrowItems() {
+
+  const schedule =
+    tomorrowSchedule();
+
+  const tasks =
+    tomorrowTasks();
+
+
+  const items = [
+
+    ...schedule.map(
+      event => ({
+        type: 'schedule',
+        time:
+          event.startTime ||
+          '',
+        title:
+          event.title ||
+          event.subject ||
+          'Classe',
+        subject:
+          event.subject ||
+          '',
+        sort:
+          event.startTime ||
+          '99:99'
+      })
+    ),
+
+    ...tasks.map(
+      task => ({
+        type: 'task',
+        time: '',
+        title:
+          task.title ||
+          'Tasca',
+        subject:
+          task.subject ||
+          '',
+        sort: '99:98'
+      })
+    )
+
   ];
 
 
-function taskCard(task) {
-
-  const days =
-    daysUntil(
-      task.dueDate
-    );
-
-  const urgent =
-    task.status !== 'completed' &&
-    days <= 2;
-
-  return `
-
-    <article
-      class="task-card"
-    >
-
-      <div class="task-main">
-
-        <button
-          class="task-check ${
-            task.status === 'completed'
-              ? 'done'
-              : ''
-          }"
-          data-action="toggle-task"
-          data-id="${task.id}"
-          aria-label="Completar"
-        >
-
-          ${
-            task.status === 'completed'
-              ? icon('check', 16)
-              : ''
-          }
-
-        </button>
-
-
-        <div class="task-info">
-
-          <div class="task-title-row">
-
-            <h3>
-              ${esc(task.title)}
-            </h3>
-
-            <span class="badge">
-              ${esc(
-                task.subject ||
-                'General'
-              )}
-            </span>
-
-          </div>
-
-
-          <p>
-            ${esc(
-              task.description ||
-              'Sense descripció'
-            )}
-          </p>
-
-
-          <div class="task-meta">
-
-            <span>
-              ${icon('calendar', 14)}
-              ${formatShortDate(
-                task.dueDate
-              )}
-            </span>
-
-            <span>
-              ${icon('clock', 14)}
-              ${Number(
-                task.minutes || 30
-              )} min
-            </span>
-
-            <span>
-              Dificultat:
-              ${difficultyLabel(
-                task.difficulty
-              )}
-            </span>
-
-
-            ${
-              urgent
-                ? `
-                  <span
-                    class="danger-text"
-                  >
-                    Urgent
-                  </span>
-                `
-                : ''
-            }
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <div class="task-actions">
-
-        <span
-          class="status ${
-            task.status
-          }"
-        >
-          ${statusLabel(
-            task.status
-          )}
-        </span>
-
-
-        <button
-          class="icon-btn"
-          data-action="edit-task"
-          data-id="${task.id}"
-          title="Editar"
-        >
-          ${icon('edit', 16)}
-        </button>
-
-
-        <button
-          class="icon-btn danger"
-          data-action="delete-task"
-          data-id="${task.id}"
-          title="Eliminar"
-        >
-          ${icon('trash', 16)}
-        </button>
-
-      </div>
-
-    </article>
-
-  `;
+  return items.sort(
+    (a, b) =>
+      a.sort.localeCompare(
+        b.sort
+      )
+  );
 
 }
 
@@ -1333,251 +2196,75 @@ function taskCard(task) {
 function dashboardView() {
 
   const pending =
-    state.tasks.filter(
-      task =>
-        task.status !==
-        'completed'
-    );
-
+    pendingTasks();
 
   const completed =
-    state.tasks.filter(
-      task =>
-        task.status ===
-        'completed'
-    );
+    completedTasks();
 
+  const exams =
+    upcomingExams();
 
   const urgent =
-    pending
-      .filter(
-        task =>
-          daysUntil(
-            task.dueDate
-          ) <= 2
-      )
-      .sort(
-        (a, b) =>
-          a.dueDate.localeCompare(
-            b.dueDate
-          )
-      );
-
-
-  const upcomingExams =
-    [...state.exams]
-      .filter(
-        exam =>
-          daysUntil(
-            exam.date
-          ) >= 0
-      )
-      .sort(
-        (a, b) =>
-          a.date.localeCompare(
-            b.date
-          )
-      )
-      .slice(0, 3);
-
-
-  const totalMinutes =
-    state.tasks.reduce(
-      (sum, task) =>
-        sum +
-        Number(
-          task.minutes || 0
-        ),
-      0
+    pending.filter(
+      task =>
+        daysUntil(
+          task.dueDate
+        ) <= 2
     );
-
 
   const completedMinutes =
-    completed.reduce(
-      (sum, task) =>
-        sum +
-        Number(
-          task.minutes || 0
-        ),
-      0
-    );
+    completedTaskMinutes();
 
+  const totalMinutes =
+    totalTaskMinutes();
 
   const percent =
-    state.tasks.length
-      ? Math.round(
-          completed.length /
-          state.tasks.length *
-          100
-        )
-      : 0;
+    progressPercent();
 
-
-  /* DEMÀ */
+  const tomorrowItems =
+    dashboardTomorrowItems();
 
   const tomorrow =
-    new Date();
-
-  tomorrow.setDate(
-    tomorrow.getDate() + 1
-  );
+    tomorrowISO();
 
 
-  const tomorrowISO =
-    new Date(
-      tomorrow.getTime() -
-      tomorrow.getTimezoneOffset() *
-      60000
-    )
-      .toISOString()
-      .slice(0, 10);
-
-
-  const tomorrowLabel =
-    new Intl.DateTimeFormat(
-      'ca-ES',
-      {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long'
-      }
-    ).format(
-      tomorrow
-    );
-
-
-  const dayMap = {
-    1: 'monday',
-    2: 'tuesday',
-    3: 'wednesday',
-    4: 'thursday',
-    5: 'friday'
-  };
-
-
-  const tomorrowEvents =
-    state.scheduleEvents
-      .filter(
-        event =>
-          event.day ===
-          dayMap[
-            tomorrow.getDay()
-          ]
-      )
-      .sort(
-        (a, b) =>
-          String(
-            a.startTime || ''
-          ).localeCompare(
-            String(
-              b.startTime || ''
-            )
-          )
-      );
-
-
-  const tomorrowTasks =
-    pending
-      .filter(
-        task =>
-          task.dueDate ===
-          tomorrowISO
-      );
-
-
-  const tomorrowItems = [
-
-    ...tomorrowEvents.map(
-      event => ({
-        kind: 'Horari',
-        time: event.startTime,
-        title: event.title,
-        meta:
-          event.subject ||
-          scheduleTypeLabel(
-            event.type
-          )
-      })
-    ),
-
-    ...tomorrowTasks.map(
-      task => ({
-        kind: 'Tasca',
-        time: 'Entrega',
-        title: task.title,
-        meta:
-          task.subject ||
-          'Sense assignatura'
-      })
-    )
-
-  ].slice(
-    0,
-    7
-  );
+  const quote =
+    teacherQuotes[
+      new Date().getDate() %
+      teacherQuotes.length
+    ];
 
 
   return `
-
-    <div
-      class="page dashboard-page"
-    >
+    <div class="page dashboard-page">
 
 
-      <!-- CAPÇALERA -->
-
-      <section
-        class="dashboard-intro"
-      >
+      <section class="dashboard-intro">
 
         <div>
 
           <p class="eyebrow">
-            TAULER
+            AVUI
           </p>
 
           <h2>
-            El teu estudi,
+            El teu estudi,<br>
             clar i al teu ritme.
           </h2>
 
-          <p
-            class="dashboard-intro-copy"
-          >
-            Tot el que necessita
-            la teva atenció,
+          <p class="dashboard-intro-copy">
+            Tot el que necessita la teva atenció,
             sense soroll.
           </p>
 
         </div>
 
-
-        <button
-          class="btn primary"
-          data-action="recalculate"
-        >
-
-          ${icon(
-            'sparkles',
-            17
-          )}
-
-          Recalcular amb IA
-
-        </button>
-
       </section>
 
 
-      <!-- DEMÀ -->
+      <section class="tomorrow-card">
 
-      <section
-        class="tomorrow-panel"
-      >
-
-        <div
-          class="tomorrow-heading"
-        >
+        <div class="tomorrow-head">
 
           <div>
 
@@ -1585,18 +2272,16 @@ function dashboardView() {
               DEMÀ
             </p>
 
-            <h2>
+            <h3>
               ${esc(
-                tomorrowLabel
+                formatTomorrowLabel()
               )}
-            </h2>
+            </h3>
 
           </div>
 
 
-          <span
-            class="tomorrow-count"
-          >
+          <span class="count-badge">
             ${tomorrowItems.length}
           </span>
 
@@ -1605,32 +2290,23 @@ function dashboardView() {
 
         ${
           tomorrowItems.length
-
             ? `
-
-              <div
-                class="tomorrow-list"
-              >
+              <div class="tomorrow-list">
 
                 ${tomorrowItems
                   .map(
                     item => `
+                      <div class="tomorrow-row">
 
-                      <div
-                        class="tomorrow-item"
-                      >
+                        <span class="tomorrow-time">
+                          ${
+                            item.time ||
+                            '—'
+                          }
+                        </span>
 
-                        <div
-                          class="tomorrow-time"
-                        >
-                          ${esc(
-                            item.time
-                          )}
-                        </div>
 
-                        <div
-                          class="tomorrow-item-main"
-                        >
+                        <div class="tomorrow-main">
 
                           <strong>
                             ${esc(
@@ -1638,106 +2314,112 @@ function dashboardView() {
                             )}
                           </strong>
 
-                          <span>
-                            ${esc(
-                              item.meta
-                            )}
-                          </span>
+                          ${
+                            item.subject
+                              ? `
+                                <small>
+                                  ${esc(
+                                    item.subject
+                                  )}
+                                </small>
+                              `
+                              : ''
+                          }
 
                         </div>
 
-                        <span
-                          class="tomorrow-kind"
-                        >
-                          ${item.kind}
+
+                        <span class="tomorrow-type">
+                          ${
+                            item.type ===
+                            'task'
+                              ? 'TASCA'
+                              : 'HORARI'
+                          }
                         </span>
 
                       </div>
-
                     `
                   )
                   .join('')}
 
               </div>
-
             `
-
             : `
+              <div class="tomorrow-empty">
 
-              <div
-                class="tomorrow-empty"
-              >
+                <div class="empty-icon">
+                  ${icon(
+                    'calendar',
+                    20
+                  )}
+                </div>
 
-                <strong>
-                  Demà està tranquil.
-                </strong>
+                <div>
 
-                <span>
-                  No hi ha classes ni
-                  entregues registrades.
-                </span>
+                  <strong>
+                    Demà està lliure.
+                  </strong>
+
+                  <span>
+                    No tens cap classe ni tasca
+                    registrada per demà.
+                  </span>
+
+                </div>
 
               </div>
-
             `
         }
 
       </section>
 
 
-      <!-- ESTADÍSTIQUES -->
-
-      <div
-        class="stats-grid"
-      >
+      <section class="stats-grid">
 
         ${statCard(
+          'tasks',
           'Tasques pendents',
-          pending.length,
-          `${completed.length} completades`,
-          'tasks'
+          String(
+            pending.length
+          ),
+          `${completed.length} completades`
         )}
 
         ${statCard(
+          'exams',
           'Exàmens propers',
-          upcomingExams.length,
-          'Pròximes dates',
-          'exams'
+          String(
+            exams.length
+          ),
+          'Properes dates'
         )}
 
         ${statCard(
+          'progress',
           'Progrés',
           `${percent}%`,
-          `${completedMinutes} / ${
-            totalMinutes || 0
-          } min`,
-          'progress'
+          `${completedMinutes} / ${totalMinutes} min`
         )}
 
         ${statCard(
+          'clock',
           'Urgents',
-          urgent.length,
-          'Pròxims 2 dies',
-          'clock'
+          String(
+            urgent.length
+          ),
+          'Pròxims 2 dies'
         )}
 
-      </div>
+      </section>
 
 
-      <!-- TASQUES + EXÀMENS -->
-
-      <div
-        class="two-col"
-      >
+      <section class="dashboard-columns">
 
 
-        <section
-          class="panel"
-        >
+        <article class="panel">
 
-          <div
-            class="panel-head"
-          >
+          <div class="panel-head">
 
             <div>
 
@@ -1745,64 +2427,73 @@ function dashboardView() {
                 ATENCIÓ
               </p>
 
-              <h2>
+              <h3>
                 Què toca ara?
-              </h2>
+              </h3>
 
             </div>
 
 
             <button
-              class="text-btn"
+              type="button"
+              class="link-btn"
               data-page="tasks"
             >
               Veure tasques
               ${icon(
                 'arrow',
-                15
+                13
               )}
             </button>
 
           </div>
 
 
-          <div class="list">
+          ${
+            pending.length
+              ? `
+                <div class="dashboard-task-list">
 
-            ${
-              (
-                urgent.length
-                  ? urgent
-                  : pending
-              )
-                .slice(
-                  0,
-                  4
-                )
-                .map(
-                  taskCard
-                )
-                .join('')
+                  ${pending
+                    .slice(0, 4)
+                    .map(
+                      task =>
+                        taskCard(
+                          task,
+                          true
+                        )
+                    )
+                    .join('')}
 
-              ||
+                </div>
+              `
+              : `
+                <div class="panel-empty">
 
-              emptyState(
-                'Tot al dia',
-                'No tens tasques pendents.'
-              )
-            }
+                  ${icon(
+                    'check',
+                    20
+                  )}
 
-          </div>
+                  <strong>
+                    No tens tasques pendents.
+                  </strong>
 
-        </section>
+                  <span>
+                    Quan n’afegeixis, TRIA
+                    t’ajudarà a ordenar-les.
+                  </span>
+
+                </div>
+              `
+          }
+
+        </article>
 
 
-        <section
-          class="panel"
-        >
+        <article class="panel">
 
-          <div
-            class="panel-head"
-          >
+          <div class="panel-head">
 
             <div>
 
@@ -1810,228 +2501,383 @@ function dashboardView() {
                 EXÀMENS
               </p>
 
-              <h2>
-                Pròximes dates
-              </h2>
+              <h3>
+                Properes dates
+              </h3>
 
             </div>
 
 
             <button
-              class="text-btn"
+              type="button"
+              class="link-btn"
               data-page="exams"
             >
               Veure exàmens
               ${icon(
                 'arrow',
-                15
+                13
               )}
             </button>
 
           </div>
 
 
-          <div
-            class="exam-list"
-          >
+          ${
+            exams.length
+              ? `
+                <div class="upcoming-exams">
 
-            ${
-              upcomingExams
-                .map(
-                  exam => `
+                  ${exams
+                    .slice(0, 4)
+                    .map(
+                      exam => `
+                        <div class="exam-mini">
 
-                    <div
-                      class="exam-row"
-                    >
+                          <div>
 
-                      <div
-                        class="date-box"
-                      >
+                            <strong>
+                              ${esc(
+                                exam.subject ||
+                                'Examen'
+                              )}
+                            </strong>
 
-                        <strong>
-                          ${
-                            new Date(
-                              `${exam.date}T12:00:00`
-                            ).getDate()
-                          }
-                        </strong>
+                            <span>
+                              ${esc(
+                                exam.title ||
+                                'Examen'
+                              )}
+                            </span>
 
-                        <span>
-                          ${
-                            new Intl.DateTimeFormat(
-                              'ca-ES',
-                              {
-                                month:
-                                  'short'
-                              }
-                            ).format(
-                              new Date(
-                                `${exam.date}T12:00:00`
+                          </div>
+
+                          <time>
+                            ${esc(
+                              formatShortDate(
+                                exam.date
                               )
-                            )
-                          }
-                        </span>
+                            )}
+                          </time>
 
-                      </div>
+                        </div>
+                      `
+                    )
+                    .join('')}
 
+                </div>
+              `
+              : `
+                <div class="panel-empty">
 
-                      <div>
+                  ${icon(
+                    'calendar',
+                    20
+                  )}
 
-                        <strong>
-                          ${esc(
-                            exam.subject
-                          )}
-                        </strong>
+                  <strong>
+                    No hi ha exàmens.
+                  </strong>
 
-                        <span>
-                          ${esc(
-                            exam.syllabus ||
-                            'Sense temari'
-                          )}
-                        </span>
+                  <span>
+                    Afegeix-ne un per començar
+                    a preparar-lo.
+                  </span>
 
-                      </div>
+                </div>
+              `
+          }
 
+        </article>
 
-                      <span
-                        class="badge"
-                      >
-                        ${
-                          difficultyLabel(
-                            exam.difficulty
-                          )
-                        }
-                      </span>
-
-                    </div>
-
-                  `
-                )
-                .join('')
-
-              ||
-
-              emptyState(
-                'Cap examen',
-                'Encara no hi ha exàmens registrats.'
-              )
-            }
-
-          </div>
-
-        </section>
-
-      </div>
-
-
-      <!-- IA -->
-
-      <section
-        class="panel ai-panel"
-      >
-
-        <div
-          class="panel-head"
-        >
-
-          <div>
-
-            <p class="eyebrow">
-              IA D'ESTUDI
-            </p>
-
-            <h2>
-              ${
-                state.plan?.summary
-                  ? 'La teva recomanació'
-                  : 'Genera el teu pla'
-              }
-            </h2>
-
-          </div>
-
-
-          <button
-            class="btn secondary"
-            data-action="recalculate"
-          >
-
-            ${icon(
-              'refresh',
-              16
-            )}
-
-            Recalcular
-
-          </button>
-
-        </div>
-
-
-        <p class="plan-summary">
-
-          ${esc(
-            state.plan?.summary ||
-            'Afegeix les teves tasques i exàmens i TRIA t’ajudarà a ordenar-los.'
-          )}
-
-        </p>
 
       </section>
 
 
-      <!-- PROFESSORAT -->
+      <section class="ai-recommendation">
 
-      <section
-        class="teacher-quote dashboard-quote"
-      >
+        <div class="ai-recommendation-icon">
+          ${icon(
+            'sparkles',
+            18
+          )}
+        </div>
 
-        <span
-          class="teacher-quote-label"
-        >
-          Vist des de l'aula
-        </span>
+
+        <div>
+
+          <p class="eyebrow">
+            RECOMANACIÓ DE TRIA
+          </p>
+
+          <h3>
+            ${
+              pending.length
+                ? `Comença per «${esc(
+                    pending[0].title
+                  )}».`
+                : 'Afegeix una tasca per començar.'
+            }
+          </h3>
+
+          <p>
+            ${
+              pending.length
+                ? `És la primera tasca de la teva llista segons la data de lliurament.`
+                : `TRIA necessita algunes dades acadèmiques per poder ordenar el teu estudi.`
+            }
+          </p>
+
+        </div>
+
+      </section>
+
+
+      <section class="teacher-note">
+
+        <p class="eyebrow">
+          VIST DES DE L’AULA
+        </p>
 
         <blockquote>
-          “${esc(
-            teacherQuote
-          )}”
+          “${esc(quote)}”
         </blockquote>
 
       </section>
 
 
     </div>
-
   `;
 
 }
 
 /* =========================================================
-   TASQUES
+   PARTE 4 · TASQUES
    ========================================================= */
+
+function taskCard(
+  task,
+  compact = false
+) {
+
+  const status =
+    task.status ||
+    'pending';
+
+  const due =
+    task.dueDate
+      ? formatShortDate(
+          task.dueDate
+        )
+      : 'Sense data';
+
+
+  const urgency =
+    task.dueDate
+      ? daysUntil(
+          task.dueDate
+        )
+      : 999;
+
+
+  let urgencyClass = '';
+
+  if (
+    urgency < 0
+  ) {
+
+    urgencyClass =
+      'overdue';
+
+  } else if (
+    urgency <= 2
+  ) {
+
+    urgencyClass =
+      'urgent';
+
+  }
+
+
+  return `
+    <article
+      class="task-card ${compact ? 'compact' : ''} ${urgencyClass}"
+    >
+
+      <button
+        type="button"
+        class="task-check ${
+          status === 'completed'
+            ? 'checked'
+            : ''
+        }"
+        data-action="toggle-task"
+        data-id="${esc(
+          task.id
+        )}"
+        aria-label="${
+          status === 'completed'
+            ? 'Marcar com a pendent'
+            : 'Marcar com a completada'
+        }"
+      >
+        ${
+          status === 'completed'
+            ? icon(
+                'check',
+                14
+              )
+            : ''
+        }
+      </button>
+
+
+      <div class="task-main">
+
+        <div class="task-title-row">
+
+          <h3 class="${
+            status === 'completed'
+              ? 'completed'
+              : ''
+          }">
+            ${esc(
+              task.title ||
+              'Tasca sense nom'
+            )}
+          </h3>
+
+
+          ${
+            task.subject
+              ? `
+                <span class="subject-pill">
+                  ${esc(
+                    task.subject
+                  )}
+                </span>
+              `
+              : ''
+          }
+
+        </div>
+
+
+        ${
+          !compact &&
+          task.description
+            ? `
+              <p>
+                ${esc(
+                  task.description
+                )}
+              </p>
+            `
+            : ''
+        }
+
+
+        <div class="task-meta">
+
+          <span>
+            ${icon(
+              'calendar',
+              12
+            )}
+            ${esc(due)}
+          </span>
+
+
+          ${
+            task.estimatedMinutes
+              ? `
+                <span>
+                  ${icon(
+                    'clock',
+                    12
+                  )}
+                  ${esc(
+                    String(
+                      task.estimatedMinutes
+                    )
+                  )} min
+                </span>
+              `
+              : ''
+          }
+
+
+          <span>
+            ${icon(
+              'info',
+              12
+            )}
+            ${esc(
+              difficultyLabel(
+                task.difficulty
+              )
+            )}
+          </span>
+
+        </div>
+
+      </div>
+
+
+      <div class="task-actions">
+
+        <button
+          type="button"
+          class="icon-btn small"
+          data-action="edit-task"
+          data-id="${esc(
+            task.id
+          )}"
+          aria-label="Editar tasca"
+        >
+          ${icon(
+            'edit',
+            14
+          )}
+        </button>
+
+
+        <button
+          type="button"
+          class="icon-btn small danger"
+          data-action="delete-task"
+          data-id="${esc(
+            task.id
+          )}"
+          aria-label="Eliminar tasca"
+        >
+          ${icon(
+            'trash',
+            14
+          )}
+        </button>
+
+      </div>
+
+    </article>
+  `;
+
+}
+
 
 function tasksView() {
 
   const tasks =
-    [...state.tasks]
-      .sort(
-        (a, b) =>
-          a.dueDate.localeCompare(
-            b.dueDate
-          )
-      );
+    sortTasks(
+      state.tasks
+    );
 
 
   return `
+    <div class="page">
 
-    <div
-      class="page"
-    >
 
-      <div
-        class="toolbar"
-      >
+      <div class="toolbar">
 
         <div>
 
@@ -2050,121 +2896,83 @@ function tasksView() {
 
         </div>
 
-
-        <button
-          class="btn primary"
-          data-action="new-task"
-        >
-
-          ${icon(
-            'plus',
-            17
-          )}
-
-          Nova tasca
-
-        </button>
-
       </div>
 
 
-      <div
-        class="task-list"
-      >
+      ${
+        tasks.length
+          ? `
+            <section class="task-list">
 
-        ${
-          tasks.length
-
-            ? tasks
+              ${tasks
                 .map(
-                  taskCard
+                  task =>
+                    taskCard(
+                      task
+                    )
                 )
-                .join('')
+                .join('')}
 
-            : emptyState(
+            </section>
+          `
+          : `
+            <section class="panel empty-panel">
+
+              ${emptyState(
                 'Encara no tens tasques',
                 'Crea la primera i TRIA podrà començar a organitzar-te.'
-              )
-        }
+              )}
 
-      </div>
+            </section>
+          `
+      }
 
     </div>
-
   `;
 
 }
 
 
-/* =========================================================
-   MODAL TASCA
-   ========================================================= */
-
 function openTaskModal(
-  id = null
+  taskId = null
 ) {
 
   modalMode =
     'task';
 
   editingId =
-    id;
+    taskId;
 
 
   const task =
-    id
-      ? state.tasks.find(
-          item =>
-            item.id === id
-        )
-      : null;
-
-
-  const modal =
-    document.querySelector(
-      '#modal'
-    );
-
-  const form =
-    document.querySelector(
-      '#modal-form'
+    state.tasks.find(
+      item =>
+        item.id === taskId
     );
 
 
-  document.querySelector(
-    '#modal-eyebrow'
-  ).textContent =
-    'TASCA';
+  const isEdit =
+    Boolean(task);
 
 
-  document.querySelector(
-    '#modal-title'
-  ).textContent =
-    task
-      ? 'Editar tasca'
-      : 'Nova tasca';
-
-
-  form.innerHTML = `
-
-    <div
+  const body = `
+    <form
+      id="task-form"
       class="form-grid"
     >
 
-
-      <label
-        class="full"
-      >
+      <label class="full">
 
         Nom de la tasca
 
         <input
           name="title"
-          required
+          type="text"
           value="${esc(
             task?.title || ''
           )}"
-          placeholder="Ex. Exercicis de matemàtiques"
+          placeholder="Ex. Preparar presentació"
+          required
         >
 
       </label>
@@ -2176,10 +2984,11 @@ function openTaskModal(
 
         <input
           name="subject"
+          type="text"
           value="${esc(
             task?.subject || ''
           )}"
-          placeholder="Ex. Matemàtiques"
+          placeholder="Ex. Història"
         >
 
       </label>
@@ -2192,10 +3001,8 @@ function openTaskModal(
         <input
           name="dueDate"
           type="date"
-          required
           value="${esc(
-            task?.dueDate ||
-            todayISO()
+            task?.dueDate || ''
           )}"
         >
 
@@ -2207,14 +3014,15 @@ function openTaskModal(
         Temps estimat
 
         <input
-          name="minutes"
+          name="estimatedMinutes"
           type="number"
-          min="5"
+          min="0"
           step="5"
-          value="${Number(
-            task?.minutes ||
-            30
+          value="${esc(
+            task?.estimatedMinutes ||
+            ''
           )}"
+          placeholder="60"
         >
 
       </label>
@@ -2224,9 +3032,7 @@ function openTaskModal(
 
         Dificultat
 
-        <select
-          name="difficulty"
-        >
+        <select name="difficulty">
 
           ${[
             [1, 'Baixa'],
@@ -2237,7 +3043,6 @@ function openTaskModal(
           ]
             .map(
               ([value, label]) => `
-
                 <option
                   value="${value}"
                   ${
@@ -2251,7 +3056,6 @@ function openTaskModal(
                 >
                   ${label}
                 </option>
-
               `
             )
             .join('')}
@@ -2265,122 +3069,120 @@ function openTaskModal(
 
         Estat
 
-        <select
-          name="status"
-        >
+        <select name="status">
 
-          ${[
-            [
-              'pending',
-              'Pendent'
-            ],
-            [
-              'inprogress',
-              'En curs'
-            ],
-            [
-              'completed',
-              'Completada'
-            ]
-          ]
-            .map(
-              ([value, label]) => `
+          <option
+            value="pending"
+            ${
+              (
+                task?.status ||
+                'pending'
+              ) === 'pending'
+                ? 'selected'
+                : ''
+            }
+          >
+            Pendent
+          </option>
 
-                <option
-                  value="${value}"
-                  ${
-                    (
-                      task?.status ||
-                      'pending'
-                    ) === value
-                      ? 'selected'
-                      : ''
-                  }
-                >
-                  ${label}
-                </option>
+          <option
+            value="inprogress"
+            ${
+              task?.status ===
+              'inprogress'
+                ? 'selected'
+                : ''
+            }
+          >
+            En curs
+          </option>
 
-              `
-            )
-            .join('')}
+          <option
+            value="completed"
+            ${
+              task?.status ===
+              'completed'
+                ? 'selected'
+                : ''
+            }
+          >
+            Completada
+          </option>
 
         </select>
 
       </label>
 
 
-      <label
-        class="full"
-      >
+      <label class="full">
 
         Descripció
 
         <textarea
           name="description"
           rows="4"
-          placeholder="Què has de fer?"
+          placeholder="Afegeix els detalls que necessitis..."
         >${esc(
-          task?.description ||
-          ''
+          task?.description || ''
         )}</textarea>
 
       </label>
 
-
-    </div>
-
-
-    <div
-      class="modal-actions"
-    >
-
-      <button
-        type="button"
-        class="btn secondary"
-        data-action="close-modal"
-      >
-        Cancel·lar
-      </button>
-
-
-      <button
-        type="submit"
-        class="btn primary"
-      >
-        Guardar tasca
-      </button>
-
-    </div>
-
+    </form>
   `;
 
 
-  form.onsubmit =
-    saveTaskFromForm;
+  setModal(
+    buildModalHtml(
+      isEdit
+        ? 'Editar tasca'
+        : 'Nova tasca',
 
+      body,
 
-  modal.classList.remove(
-    'hidden'
+      `
+        <button
+          type="button"
+          class="btn secondary"
+          data-action="close-modal"
+        >
+          Cancel·lar
+        </button>
+
+        <button
+          type="button"
+          class="btn primary"
+          data-action="save-task"
+        >
+          ${
+            isEdit
+              ? 'Desar canvis'
+              : 'Crear tasca'
+          }
+        </button>
+      `
+    )
   );
 
 }
 
 
-/* =========================================================
-   GUARDAR TASCA
-   ========================================================= */
+function saveTaskFromForm() {
 
-function saveTaskFromForm(
-  event
-) {
+  const form =
+    document.querySelector(
+      '#task-form'
+    );
 
-  event.preventDefault();
+  if (!form) {
+
+    return;
+
+  }
 
 
   const data =
-    new FormData(
-      event.currentTarget
-    );
+    new FormData(form);
 
 
   const title =
@@ -2392,8 +3194,9 @@ function saveTaskFromForm(
 
   if (!title) {
 
-    alert(
-      'Escriu el nom de la tasca.'
+    showToast(
+      'Escriu un nom per a la tasca.',
+      'error'
     );
 
     return;
@@ -2401,40 +3204,36 @@ function saveTaskFromForm(
   }
 
 
-  const task = {
-
-    id:
-      editingId ||
-      uid('task'),
+  const payload = {
 
     title,
 
     subject:
       String(
-        data.get(
-          'subject'
-        ) || ''
+        data.get('subject') ||
+        ''
       ).trim(),
 
     description:
       String(
-        data.get(
-          'description'
-        ) || ''
+        data.get('description') ||
+        ''
       ).trim(),
 
     dueDate:
       String(
-        data.get(
-          'dueDate'
-        ) || todayISO()
+        data.get('dueDate') ||
+        ''
       ),
 
-    minutes:
-      Number(
-        data.get(
-          'minutes'
-        ) || 30
+    estimatedMinutes:
+      Math.max(
+        0,
+        Number(
+          data.get(
+            'estimatedMinutes'
+          ) || 0
+        )
       ),
 
     difficulty:
@@ -2459,17 +3258,36 @@ function saveTaskFromForm(
 
     state.tasks =
       state.tasks.map(
-        item =>
-          item.id ===
+        task =>
+          task.id ===
           editingId
-            ? task
-            : item
+            ? {
+                ...task,
+                ...payload
+              }
+            : task
       );
+
+    showToast(
+      'Tasca actualitzada.'
+    );
 
   } else {
 
-    state.tasks.push(
-      task
+    state.tasks.push({
+
+      id:
+        uid('task'),
+
+      createdAt:
+        new Date().toISOString(),
+
+      ...payload
+
+    });
+
+    showToast(
+      'Tasca creada.'
     );
 
   }
@@ -2484,10 +3302,6 @@ function saveTaskFromForm(
 }
 
 
-/* =========================================================
-   TOGGLE
-   ========================================================= */
-
 function toggleTask(
   id
 ) {
@@ -2499,7 +3313,9 @@ function toggleTask(
         if (
           task.id !== id
         ) {
+
           return task;
+
         }
 
 
@@ -2526,10 +3342,6 @@ function toggleTask(
 }
 
 
-/* =========================================================
-   ELIMINAR
-   ========================================================= */
-
 function deleteTask(
   id
 ) {
@@ -2542,16 +3354,22 @@ function deleteTask(
 
 
   if (!task) {
+
     return;
+
   }
 
 
-  if (
-    !confirm(
-      `Vols eliminar «${task.title}»?`
-    )
-  ) {
+  const confirmed =
+    window.confirm(
+      `Eliminar «${task.title}»?`
+    );
+
+
+  if (!confirmed) {
+
     return;
+
   }
 
 
@@ -2564,35 +3382,31 @@ function deleteTask(
 
   saveState();
 
+  showToast(
+    'Tasca eliminada.'
+  );
+
   render();
 
 }
 
 /* =========================================================
-   EXÀMENS
+   PARTE 5 · EXÀMENS
    ========================================================= */
 
 function examsView() {
 
   const exams =
-    [...state.exams]
-      .sort(
-        (a, b) =>
-          a.date.localeCompare(
-            b.date
-          )
-      );
+    sortExams(
+      state.exams
+    );
 
 
   return `
+    <div class="page">
 
-    <div
-      class="page"
-    >
 
-      <div
-        class="toolbar"
-      >
+      <div class="toolbar">
 
         <div>
 
@@ -2611,231 +3425,232 @@ function examsView() {
 
         </div>
 
-
-        <button
-          class="btn primary"
-          data-action="new-exam"
-        >
-
-          ${icon(
-            'plus',
-            17
-          )}
-
-          Nou examen
-
-        </button>
-
       </div>
 
 
-      <div
-        class="exam-grid"
-      >
+      ${
+        exams.length
+          ? `
+            <section class="exam-grid">
 
-        ${
-          exams.length
-
-            ? exams
+              ${exams
                 .map(
                   exam => `
+                    <article class="exam-card">
 
-                    <article
-                      class="exam-card"
-                    >
-
-                      <div
-                        class="exam-card-top"
-                      >
-
-                        <span
-                          class="badge"
-                        >
-                          ${esc(
-                            exam.subject
-                          )}
-                        </span>
-
-                        <span
-                          class="status pending"
-                        >
-                          ${formatDate(
-                            exam.date
-                          )}
-                        </span>
-
-                      </div>
-
-
-                      <h3>
-                        ${esc(
-                          exam.subject
-                        )}
-                      </h3>
-
-
-                      <p>
-                        ${esc(
-                          exam.syllabus ||
-                          'Sense temari definit.'
-                        )}
-                      </p>
-
-
-                      <div
-                        class="exam-details"
-                      >
+                      <div class="exam-date">
 
                         <span>
-                          Dificultat:
                           ${
-                            difficultyLabel(
-                              exam.difficulty
+                            dateFromISO(
+                              exam.date
                             )
+                              ? new Intl.DateTimeFormat(
+                                  'ca-ES',
+                                  {
+                                    weekday:
+                                      'short'
+                                  }
+                                ).format(
+                                  dateFromISO(
+                                    exam.date
+                                  )
+                                )
+                              : ''
                           }
                         </span>
 
-                        <span>
-                          Temps disponible:
+                        <strong>
                           ${
-                            Number(
-                              exam.availableMinutes ||
-                              0
+                            dateFromISO(
+                              exam.date
                             )
-                          } min
-                        </span>
+                              ? dateFromISO(
+                                  exam.date
+                                ).getDate()
+                              : '—'
+                          }
+                        </strong>
 
                       </div>
 
 
-                      <div
-                        class="card-actions"
-                      >
+                      <div class="exam-main">
+
+                        <p class="eyebrow">
+                          ${esc(
+                            exam.subject ||
+                            'Assignatura'
+                          )}
+                        </p>
+
+                        <h3>
+                          ${esc(
+                            exam.title ||
+                            'Examen'
+                          )}
+                        </h3>
+
+
+                        ${
+                          exam.syllabus
+                            ? `
+                              <p>
+                                ${esc(
+                                  exam.syllabus
+                                )}
+                              </p>
+                            `
+                            : ''
+                        }
+
+
+                        <div class="exam-meta">
+
+                          <span>
+                            ${icon(
+                              'clock',
+                              12
+                            )}
+                            ${
+                              exam.studyMinutes ||
+                              0
+                            } min
+                          </span>
+
+                          <span>
+                            ${icon(
+                              'info',
+                              12
+                            )}
+                            ${esc(
+                              difficultyLabel(
+                                exam.difficulty
+                              )
+                            )}
+                          </span>
+
+                        </div>
+
+                      </div>
+
+
+                      <div class="exam-actions">
 
                         <button
-                          class="btn secondary"
+                          type="button"
+                          class="icon-btn small"
                           data-action="edit-exam"
-                          data-id="${exam.id}"
+                          data-id="${esc(
+                            exam.id
+                          )}"
+                          aria-label="Editar examen"
                         >
-
                           ${icon(
                             'edit',
-                            15
+                            14
                           )}
-
-                          Editar
-
                         </button>
 
 
                         <button
-                          class="btn ghost danger-btn"
+                          type="button"
+                          class="icon-btn small danger"
                           data-action="delete-exam"
-                          data-id="${exam.id}"
+                          data-id="${esc(
+                            exam.id
+                          )}"
+                          aria-label="Eliminar examen"
                         >
-
                           ${icon(
                             'trash',
-                            15
+                            14
                           )}
-
-                          Eliminar
-
                         </button>
 
                       </div>
 
                     </article>
-
                   `
                 )
-                .join('')
+                .join('')}
 
-            : emptyState(
+            </section>
+          `
+          : `
+            <section class="panel empty-panel">
+
+              ${emptyState(
                 'No hi ha exàmens',
-                'Afegeix el teu primer examen per començar a planificar-lo.'
-              )
-        }
+                'Afegeix el primer examen per començar a planificar-lo.'
+              )}
 
-      </div>
+            </section>
+          `
+      }
 
     </div>
-
   `;
 
 }
 
 
-/* =========================================================
-   MODAL EXAMEN
-   ========================================================= */
-
 function openExamModal(
-  id = null
+  examId = null
 ) {
 
   modalMode =
     'exam';
 
   editingId =
-    id;
+    examId;
 
 
   const exam =
-    id
-      ? state.exams.find(
-          item =>
-            item.id === id
-        )
-      : null;
-
-
-  const modal =
-    document.querySelector(
-      '#modal'
-    );
-
-  const form =
-    document.querySelector(
-      '#modal-form'
+    state.exams.find(
+      item =>
+        item.id === examId
     );
 
 
-  document.querySelector(
-    '#modal-eyebrow'
-  ).textContent =
-    'EXAMEN';
+  const isEdit =
+    Boolean(exam);
 
 
-  document.querySelector(
-    '#modal-title'
-  ).textContent =
-    exam
-      ? 'Editar examen'
-      : 'Nou examen';
-
-
-  form.innerHTML = `
-
-    <div
+  const body = `
+    <form
+      id="exam-form"
       class="form-grid"
     >
 
+      <label class="full">
 
-      <label
-        class="full"
-      >
+        Nom de l’examen
+
+        <input
+          name="title"
+          type="text"
+          value="${esc(
+            exam?.title || ''
+          )}"
+          placeholder="Ex. Examen de Física"
+          required
+        >
+
+      </label>
+
+
+      <label>
 
         Assignatura
 
         <input
           name="subject"
-          required
+          type="text"
           value="${esc(
-            exam?.subject ||
-            ''
+            exam?.subject || ''
           )}"
-          placeholder="Ex. Història"
+          placeholder="Física"
         >
 
       </label>
@@ -2848,11 +3663,29 @@ function openExamModal(
         <input
           name="date"
           type="date"
-          required
           value="${esc(
-            exam?.date ||
-            todayISO()
+            exam?.date || ''
           )}"
+          required
+        >
+
+      </label>
+
+
+      <label>
+
+        Temps d’estudi
+
+        <input
+          name="studyMinutes"
+          type="number"
+          min="0"
+          step="15"
+          value="${esc(
+            exam?.studyMinutes ||
+            ''
+          )}"
+          placeholder="180"
         >
 
       </label>
@@ -2862,9 +3695,7 @@ function openExamModal(
 
         Dificultat
 
-        <select
-          name="difficulty"
-        >
+        <select name="difficulty">
 
           ${[
             [1, 'Baixa'],
@@ -2875,7 +3706,6 @@ function openExamModal(
           ]
             .map(
               ([value, label]) => `
-
                 <option
                   value="${value}"
                   ${
@@ -2889,7 +3719,6 @@ function openExamModal(
                 >
                   ${label}
                 </option>
-
               `
             )
             .join('')}
@@ -2899,110 +3728,96 @@ function openExamModal(
       </label>
 
 
-      <label>
-
-        Temps disponible
-
-        <input
-          name="availableMinutes"
-          type="number"
-          min="0"
-          step="15"
-          value="${Number(
-            exam?.availableMinutes ||
-            120
-          )}"
-        >
-
-      </label>
-
-
-      <label
-        class="full"
-      >
+      <label class="full">
 
         Temari
 
         <textarea
           name="syllabus"
-          rows="4"
-          placeholder="Temes que entren a l'examen"
+          rows="5"
+          placeholder="Temes, capítols o continguts que entren..."
         >${esc(
-          exam?.syllabus ||
-          ''
+          exam?.syllabus || ''
         )}</textarea>
 
       </label>
 
-
-    </div>
-
-
-    <div
-      class="modal-actions"
-    >
-
-      <button
-        type="button"
-        class="btn secondary"
-        data-action="close-modal"
-      >
-        Cancel·lar
-      </button>
-
-
-      <button
-        type="submit"
-        class="btn primary"
-      >
-        Guardar examen
-      </button>
-
-    </div>
-
+    </form>
   `;
 
 
-  form.onsubmit =
-    saveExamFromForm;
+  setModal(
+    buildModalHtml(
+      isEdit
+        ? 'Editar examen'
+        : 'Nou examen',
 
+      body,
 
-  modal.classList.remove(
-    'hidden'
+      `
+        <button
+          type="button"
+          class="btn secondary"
+          data-action="close-modal"
+        >
+          Cancel·lar
+        </button>
+
+        <button
+          type="button"
+          class="btn primary"
+          data-action="save-exam"
+        >
+          ${
+            isEdit
+              ? 'Desar canvis'
+              : 'Crear examen'
+          }
+        </button>
+      `
+    )
   );
 
 }
 
 
-/* =========================================================
-   GUARDAR EXAMEN
-   ========================================================= */
+function saveExamFromForm() {
 
-function saveExamFromForm(
-  event
-) {
+  const form =
+    document.querySelector(
+      '#exam-form'
+    );
 
-  event.preventDefault();
+  if (!form) {
+
+    return;
+
+  }
 
 
   const data =
-    new FormData(
-      event.currentTarget
-    );
+    new FormData(form);
 
 
-  const subject =
+  const title =
     String(
-      data.get(
-        'subject'
-      ) || ''
+      data.get('title') ||
+      ''
     ).trim();
 
 
-  if (!subject) {
+  const date =
+    String(
+      data.get('date') ||
+      ''
+    );
 
-    alert(
-      'Escriu l’assignatura.'
+
+  if (!title) {
+
+    showToast(
+      'Escriu un nom per a l’examen.',
+      'error'
     );
 
     return;
@@ -3010,41 +3825,51 @@ function saveExamFromForm(
   }
 
 
-  const exam = {
+  if (!date) {
 
-    id:
-      editingId ||
-      uid('exam'),
+    showToast(
+      'Selecciona la data de l’examen.',
+      'error'
+    );
 
-    subject,
+    return;
 
-    date:
+  }
+
+
+  const payload = {
+
+    title,
+
+    subject:
       String(
-        data.get(
-          'date'
-        ) ||
-        todayISO()
-      ),
+        data.get('subject') ||
+        ''
+      ).trim(),
+
+    date,
 
     syllabus:
       String(
-        data.get(
-          'syllabus'
-        ) || ''
+        data.get('syllabus') ||
+        ''
       ).trim(),
+
+    studyMinutes:
+      Math.max(
+        0,
+        Number(
+          data.get(
+            'studyMinutes'
+          ) || 0
+        )
+      ),
 
     difficulty:
       Number(
         data.get(
           'difficulty'
         ) || 3
-      ),
-
-    availableMinutes:
-      Number(
-        data.get(
-          'availableMinutes'
-        ) || 0
       )
 
   };
@@ -3054,17 +3879,36 @@ function saveExamFromForm(
 
     state.exams =
       state.exams.map(
-        item =>
-          item.id ===
+        exam =>
+          exam.id ===
           editingId
-            ? exam
-            : item
+            ? {
+                ...exam,
+                ...payload
+              }
+            : exam
       );
+
+    showToast(
+      'Examen actualitzat.'
+    );
 
   } else {
 
-    state.exams.push(
-      exam
+    state.exams.push({
+
+      id:
+        uid('exam'),
+
+      createdAt:
+        new Date().toISOString(),
+
+      ...payload
+
+    });
+
+    showToast(
+      'Examen creat.'
     );
 
   }
@@ -3079,10 +3923,6 @@ function saveExamFromForm(
 }
 
 
-/* =========================================================
-   ELIMINAR EXAMEN
-   ========================================================= */
-
 function deleteExam(
   id
 ) {
@@ -3095,16 +3935,22 @@ function deleteExam(
 
 
   if (!exam) {
+
     return;
+
   }
 
 
-  if (
-    !confirm(
-      `Vols eliminar l'examen de ${exam.subject}?`
-    )
-  ) {
+  const confirmed =
+    window.confirm(
+      `Eliminar «${exam.title}»?`
+    );
+
+
+  if (!confirmed) {
+
     return;
+
   }
 
 
@@ -3117,22 +3963,68 @@ function deleteExam(
 
   saveState();
 
+  showToast(
+    'Examen eliminat.'
+  );
+
   render();
 
 }
 
 /* =========================================================
-   HORARI
+   PARTE 6 · HORARI
    ========================================================= */
 
-function scheduleTypeLabel(type) {
+function scheduleTypeLabel(
+  type
+) {
 
   return {
-    class: 'Classe',
-    study: 'Estudi',
-    break: 'Descans',
-    other: 'Altres'
-  }[type] || 'Classe';
+
+    class:
+      'Classe',
+
+    study:
+      'Estudi',
+
+    exam:
+      'Examen',
+
+    task:
+      'Tasca'
+
+  }[
+    type
+  ] || 'Horari';
+
+}
+
+
+function scheduleDayName(
+  day
+) {
+
+  return {
+
+    monday:
+      'Dilluns',
+
+    tuesday:
+      'Dimarts',
+
+    wednesday:
+      'Dimecres',
+
+    thursday:
+      'Dijous',
+
+    friday:
+      'Divendres'
+
+  }[
+    String(day)
+      .toLowerCase()
+  ] || day;
 
 }
 
@@ -3140,19 +4032,43 @@ function scheduleTypeLabel(type) {
 function scheduleView() {
 
   const days = [
-    ['monday', 'Dilluns'],
-    ['tuesday', 'Dimarts'],
-    ['wednesday', 'Dimecres'],
-    ['thursday', 'Dijous'],
-    ['friday', 'Divendres']
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday'
   ];
 
 
-  return `
+  const events =
+    [...state.scheduleEvents]
+      .sort(
+        (a, b) =>
+          String(
+            a.day || ''
+          ).localeCompare(
+            String(
+              b.day || ''
+            )
+          ) ||
+          String(
+            a.startTime || ''
+          ).localeCompare(
+            String(
+              b.startTime || ''
+            )
+          )
+      );
 
+
+  return `
     <div class="page">
 
-      <div class="toolbar">
+
+      <div
+        class="toolbar"
+        id="schedule-upload"
+      >
 
         <div>
 
@@ -3166,7 +4082,7 @@ function scheduleView() {
 
           <p class="muted">
             Puja una foto del teu horari
-            i TRIA l'organitzarà.
+            i TRIA l’organitzarà.
           </p>
 
         </div>
@@ -3176,35 +4092,42 @@ function scheduleView() {
 
           <label
             class="btn primary"
+            for="schedule-image"
           >
-
-            ${icon('camera', 17)}
-
+            ${icon(
+              'camera',
+              15
+            )}
             Analitzar horari
-
-            <input
-              id="schedule-image"
-              type="file"
-              accept="image/*"
-              hidden
-            >
-
           </label>
 
-
-          <button
-            class="btn secondary"
-            data-action="clear-schedule"
+          <input
+            id="schedule-image"
+            type="file"
+            accept="image/*"
+            hidden
           >
-            Netejar
-          </button>
+
+          ${
+            events.length
+              ? `
+                <button
+                  type="button"
+                  class="btn secondary"
+                  data-action="clear-schedule"
+                >
+                  Netejar
+                </button>
+              `
+              : ''
+          }
 
         </div>
 
       </div>
 
 
-      <section class="panel">
+      <section class="panel schedule-panel">
 
         <div class="panel-head">
 
@@ -3214,157 +4137,201 @@ function scheduleView() {
               SETMANA
             </p>
 
-            <h2>
+            <h3>
               El teu horari
-            </h2>
+            </h3>
 
           </div>
 
-          <span
-            class="badge"
-          >
-            ${
-              state.scheduleEvents.length
-            } elements
+
+          <span class="count-badge">
+            ${events.length} elements
           </span>
 
         </div>
 
 
-        <div
-          class="schedule-grid"
-        >
+        ${
+          events.length
+            ? `
+              <div class="schedule-grid">
 
-          ${days
-            .map(
-              ([id, label]) => {
+                ${days
+                  .map(
+                    day => {
 
-                const events =
-                  state.scheduleEvents
-                    .filter(
-                      event =>
-                        event.day === id
-                    )
-                    .sort(
-                      (a, b) =>
-                        String(
-                          a.startTime || ''
-                        ).localeCompare(
-                          String(
-                            b.startTime || ''
-                          )
-                        )
-                    );
+                      const dayEvents =
+                        events.filter(
+                          event =>
+                            String(
+                              event.day ||
+                              ''
+                            ).toLowerCase() ===
+                            day
+                        );
 
-                return `
 
-                  <div
-                    class="schedule-day"
-                  >
+                      return `
+                        <div class="schedule-day">
 
-                    <div
-                      class="schedule-day-head"
-                    >
-                      ${label}
-                    </div>
+                          <div class="schedule-day-header">
 
-                    <div
-                      class="schedule-day-list"
-                    >
+                            <span>
+                              SETMANA
+                            </span>
 
-                      ${
-                        events.length
+                            <strong>
+                              ${scheduleDayName(
+                                day
+                              )}
+                            </strong>
 
-                          ? events
-                              .map(
-                                event => `
+                          </div>
 
-                                  <div
-                                    class="schedule-event"
-                                  >
 
-                                    <span
-                                      class="schedule-event-time"
-                                    >
-                                      ${esc(
-                                        event.startTime ||
-                                        ''
-                                      )}
-                                      ${
-                                        event.endTime
-                                          ? `– ${esc(
+                          <div class="schedule-day-body">
+
+                            ${
+                              dayEvents.length
+                                ? dayEvents
+                                    .map(
+                                      event => `
+                                        <article class="schedule-event">
+
+                                          <span class="schedule-time">
+                                            ${esc(
+                                              event.startTime ||
+                                              ''
+                                            )}
+                                            ${
                                               event.endTime
-                                            )}`
-                                          : ''
-                                      }
-                                    </span>
+                                                ? `–${esc(
+                                                    event.endTime
+                                                  )}`
+                                                : ''
+                                            }
+                                          </span>
 
-                                    <strong>
-                                      ${esc(
-                                        event.title ||
-                                        'Classe'
-                                      )}
-                                    </strong>
+                                          <strong>
+                                            ${esc(
+                                              event.title ||
+                                              event.subject ||
+                                              'Classe'
+                                            )}
+                                          </strong>
 
-                                    <small>
-                                      ${esc(
-                                        event.subject ||
-                                        scheduleTypeLabel(
-                                          event.type
-                                        )
-                                      )}
-                                    </small>
+                                          ${
+                                            event.subject &&
+                                            event.title !==
+                                              event.subject
+                                              ? `
+                                                <small>
+                                                  ${esc(
+                                                    event.subject
+                                                  )}
+                                                </small>
+                                              `
+                                              : ''
+                                          }
 
-                                  </div>
+                                        </article>
+                                      `
+                                    )
+                                    .join('')
+                                : `
+                                    <div class="schedule-empty">
+                                      Sense classes
+                                    </div>
+                                  `
+                            }
 
-                                `
-                              )
-                              .join('')
+                          </div>
 
-                          : `
-                            <div class="schedule-empty">
-                              Sense classes
-                            </div>
-                          `
-                      }
+                        </div>
+                      `;
 
-                    </div>
+                    }
+                  )
+                  .join('')}
 
-                  </div>
+              </div>
+            `
+            : `
+              <div class="schedule-empty-state">
 
-                `;
+                <div class="empty-icon">
+                  ${icon(
+                    'camera',
+                    22
+                  )}
+                </div>
 
-              }
-            )
-            .join('')}
+                <h3>
+                  Encara no tens cap horari
+                </h3>
 
-        </div>
+                <p>
+                  Puja una foto clara del teu horari
+                  i deixa que TRIA el converteixi
+                  en dades organitzades.
+                </p>
+
+                <label
+                  class="btn primary"
+                  for="schedule-image"
+                >
+                  ${icon(
+                    'camera',
+                    15
+                  )}
+                  Analitzar horari
+                </label>
+
+              </div>
+            `
+        }
 
       </section>
 
     </div>
-
   `;
 
 }
 
-
-/* =========================================================
-   PREPARAR IMATGE · SAFARI
-   ========================================================= */
 
 async function prepareScheduleImage(
   file
 ) {
 
   return new Promise(
-    (resolve, reject) => {
+    (
+      resolve,
+      reject
+    ) => {
 
       if (!file) {
 
         reject(
           new Error(
             'No s’ha seleccionat cap imatge.'
+          )
+        );
+
+        return;
+
+      }
+
+
+      if (
+        !file.type ||
+        !file.type.startsWith(
+          'image/'
+        )
+      ) {
+
+        reject(
+          new Error(
+            'El fitxer seleccionat no és una imatge.'
           )
         );
 
@@ -3387,13 +4354,15 @@ async function prepareScheduleImage(
 
         try {
 
-          const maxWidth = 1800;
+          const maxWidth =
+            1800;
+
 
           const scale =
             Math.min(
               1,
               maxWidth /
-              image.width
+                image.width
             );
 
 
@@ -3472,7 +4441,9 @@ async function prepareScheduleImage(
             );
 
 
-          if (comma === -1) {
+          if (
+            comma === -1
+          ) {
 
             throw new Error(
               'Format d’imatge no vàlid.'
@@ -3493,7 +4464,6 @@ async function prepareScheduleImage(
 
           });
 
-
         } catch (error) {
 
           URL.revokeObjectURL(
@@ -3507,19 +4477,20 @@ async function prepareScheduleImage(
       };
 
 
-      image.onerror = () => {
+      image.onerror =
+        () => {
 
-        URL.revokeObjectURL(
-          objectUrl
-        );
+          URL.revokeObjectURL(
+            objectUrl
+          );
 
-        reject(
-          new Error(
-            'Safari no ha pogut llegir aquesta imatge.'
-          )
-        );
+          reject(
+            new Error(
+              'Safari no ha pogut llegir aquesta imatge.'
+            )
+          );
 
-      };
+        };
 
 
       image.src =
@@ -3531,13 +4502,22 @@ async function prepareScheduleImage(
 }
 
 
-/* =========================================================
-   ANALITZAR HORARI
-   ========================================================= */
-
 async function handleScheduleImage(
   file
 ) {
+
+  if (!file) {
+
+    return;
+
+  }
+
+
+  showToast(
+    'Analitzant el teu horari...',
+    'info'
+  );
+
 
   try {
 
@@ -3545,11 +4525,6 @@ async function handleScheduleImage(
       await prepareScheduleImage(
         file
       );
-
-
-    showToast(
-      'Analitzant l’horari...'
-    );
 
 
     const response =
@@ -3576,7 +4551,10 @@ async function handleScheduleImage(
 
 
     const data =
-      await response.json();
+      await response.json()
+        .catch(
+          () => ({})
+        );
 
 
     if (!response.ok) {
@@ -3589,17 +4567,106 @@ async function handleScheduleImage(
     }
 
 
-    pendingScheduleEvents =
+    const events =
       Array.isArray(
         data.events
       )
         ? data.events
-        : [];
+        : Array.isArray(
+            data.schedule
+          )
+          ? data.schedule
+          : [];
+
+
+    if (!events.length) {
+
+      throw new Error(
+        'No s’han detectat classes a la imatge.'
+      );
+
+    }
+
+
+    pendingScheduleEvents =
+      events
+        .map(
+          event => ({
+            ...event,
+
+            id:
+              event.id ||
+              uid('schedule'),
+
+            day:
+              String(
+                event.day ||
+                ''
+              ).toLowerCase(),
+
+            startTime:
+              String(
+                event.startTime ||
+                ''
+              ),
+
+            endTime:
+              String(
+                event.endTime ||
+                ''
+              ),
+
+            title:
+              String(
+                event.title ||
+                event.subject ||
+                'Classe'
+              ),
+
+            subject:
+              String(
+                event.subject ||
+                event.title ||
+                ''
+              )
+
+          })
+        )
+        .filter(
+          event =>
+            [
+              'monday',
+              'tuesday',
+              'wednesday',
+              'thursday',
+              'friday'
+            ].includes(
+              event.day
+            ) &&
+            /^\d{2}:\d{2}$/.test(
+              event.startTime
+            )
+        );
+
+
+    if (
+      !pendingScheduleEvents.length
+    ) {
+
+      throw new Error(
+        'L’horari detectat no té un format vàlid.'
+      );
+
+    }
 
 
     openScheduleReview();
 
   } catch (error) {
+
+    console.error(
+      error
+    );
 
     showToast(
       error.message ||
@@ -3612,161 +4679,133 @@ async function handleScheduleImage(
 }
 
 
-/* =========================================================
-   REVISIÓ HORARI
-   ========================================================= */
-
 function openScheduleReview() {
 
-  modalMode =
-    'schedule-review';
+  const events =
+    pendingScheduleEvents;
 
 
-  const modal =
-    document.querySelector(
-      '#modal'
-    );
+  const body = `
+    <div class="schedule-review-intro">
+
+      <p>
+        TRIA ha detectat
+        <strong>${events.length}</strong>
+        elements.
+      </p>
+
+      <span>
+        Revisa el resultat abans de desar-lo.
+      </span>
+
+    </div>
 
 
-  const form =
-    document.querySelector(
-      '#modal-form'
-    );
+    <div class="schedule-review">
 
+      ${events
+        .map(
+          (event, index) => `
+            <div
+              class="review-event"
+              data-review-index="${index}"
+            >
 
-  document.querySelector(
-    '#modal-eyebrow'
-  ).textContent =
-    'IA · HORARI';
+              <div>
 
+                <strong>
+                  ${esc(
+                    event.title
+                  )}
+                </strong>
 
-  document.querySelector(
-    '#modal-title'
-  ).textContent =
-    'Revisa el teu horari';
-
-
-  form.innerHTML = `
-
-    <div
-      class="schedule-review"
-    >
-
-      ${
-        pendingScheduleEvents.length
-
-          ? pendingScheduleEvents
-              .map(
-                (event, index) => `
-
-                  <div
-                    class="review-event"
-                  >
-
-                    <div>
-
-                      <strong>
-                        ${esc(
-                          event.title ||
-                          'Classe'
-                        )}
-                      </strong>
-
-                      <span>
-                        ${esc(
-                          event.day ||
-                          ''
-                        )}
-                        ·
-                        ${esc(
-                          event.startTime ||
-                          ''
-                        )}
-                        ${
+                <span>
+                  ${esc(
+                    scheduleDayName(
+                      event.day
+                    )
+                  )}
+                  ·
+                  ${esc(
+                    event.startTime
+                  )}
+                  ${
+                    event.endTime
+                      ? `–${esc(
                           event.endTime
-                            ? `– ${esc(
-                                event.endTime
-                              )}`
-                            : ''
-                        }
-                      </span>
+                        )}`
+                      : ''
+                  }
+                </span>
 
-                    </div>
+              </div>
 
 
-                    <button
-                      type="button"
-                      class="icon-btn danger"
-                      data-action="remove-review-event"
-                      data-index="${index}"
-                    >
-                      ${icon(
-                        'trash',
-                        15
-                      )}
-                    </button>
+              <button
+                type="button"
+                class="icon-btn small danger"
+                data-action="remove-review-event"
+                data-index="${index}"
+                aria-label="Eliminar element"
+              >
+                ${icon(
+                  'trash',
+                  14
+                )}
+              </button>
 
-                  </div>
-
-                `
-              )
-              .join('')
-
-          : emptyState(
-              'No s’han detectat classes',
-              'Prova amb una foto més clara.'
-            )
-      }
+            </div>
+          `
+        )
+        .join('')}
 
     </div>
-
-
-    <div
-      class="modal-actions"
-    >
-
-      <button
-        type="button"
-        class="btn secondary"
-        data-action="close-modal"
-      >
-        Cancel·lar
-      </button>
-
-
-      <button
-        type="submit"
-        class="btn primary"
-        ${
-          pendingScheduleEvents.length
-            ? ''
-            : 'disabled'
-        }
-      >
-        Guardar horari
-      </button>
-
-    </div>
-
   `;
 
 
-  form.onsubmit =
-    saveScheduleReview;
+  setModal(
+    buildModalHtml(
+      'Revisar horari',
 
+      body,
 
-  modal.classList.remove(
-    'hidden'
+      `
+        <button
+          type="button"
+          class="btn secondary"
+          data-action="close-modal"
+        >
+          Cancel·lar
+        </button>
+
+        <button
+          type="button"
+          class="btn primary"
+          data-action="save-schedule-review"
+        >
+          Desar horari
+        </button>
+      `
+    )
   );
 
 }
 
 
-function saveScheduleReview(
-  event
-) {
+function saveScheduleReview() {
 
-  event.preventDefault();
+  if (
+    !pendingScheduleEvents.length
+  ) {
+
+    showToast(
+      'No hi ha cap element per desar.',
+      'error'
+    );
+
+    return;
+
+  }
 
 
   state.scheduleEvents =
@@ -3782,86 +4821,234 @@ function saveScheduleReview(
 
   saveState();
 
-  pendingScheduleEvents =
-    [];
+  pendingScheduleEvents = [];
 
   closeModal();
 
+  showToast(
+    'Horari desat correctament.'
+  );
+
   render();
 
-  showToast(
-    'Horari guardat.'
-  );
+}
+
+
+function removeReviewEvent(
+  index
+) {
+
+  pendingScheduleEvents =
+    pendingScheduleEvents.filter(
+      (_event, i) =>
+        i !== Number(index)
+    );
+
+
+  if (
+    !pendingScheduleEvents.length
+  ) {
+
+    closeModal();
+
+    showToast(
+      'No queda cap element de l’horari.',
+      'info'
+    );
+
+    return;
+
+  }
+
+
+  openScheduleReview();
 
 }
 
 /* =========================================================
-   PLANIFICADOR
+   PARTE 7 · PLANIFICADOR
    ========================================================= */
 
-function plannerView() {
+function startOfWeek(
+  date = new Date()
+) {
 
-  const today =
-    new Date();
-
-
-  const weekStart =
-    new Date(today);
+  const result =
+    new Date(date);
 
   const day =
-    weekStart.getDay();
+    result.getDay();
+
 
   const diff =
     day === 0
       ? -6
       : 1 - day;
 
-  weekStart.setDate(
-    weekStart.getDate() +
+
+  result.setDate(
+    result.getDate() +
     diff
   );
 
 
-  const days = [];
+  result.setHours(
+    12,
+    0,
+    0,
+    0
+  );
 
 
-  for (
-    let i = 0;
-    i < 7;
-    i++
-  ) {
+  return result;
 
-    const date =
-      new Date(
-        weekStart
+}
+
+
+function plannerWeekDays() {
+
+  const monday =
+    startOfWeek();
+
+
+  return Array.from(
+    {
+      length: 5
+    },
+    (_, index) => {
+
+      const date =
+        new Date(monday);
+
+      date.setDate(
+        monday.getDate() +
+        index
       );
 
-    date.setDate(
-      weekStart.getDate() +
-      i
+
+      return date;
+
+    }
+  );
+
+}
+
+
+function plannerDayEvents(
+  date
+) {
+
+  const iso =
+    isoDay(date);
+
+
+  return state.scheduleEvents
+    .filter(
+      event =>
+        event.date === iso
+    )
+    .sort(
+      (a, b) =>
+        String(
+          a.startTime || ''
+        ).localeCompare(
+          String(
+            b.startTime || ''
+          )
+        )
     );
 
-    const iso =
-      new Date(
-        date.getTime() -
-        date.getTimezoneOffset() *
-        60000
-      )
-        .toISOString()
-        .slice(0, 10);
+}
 
 
-    days.push({
-      date,
-      iso
-    });
+function plannerDayTasks(
+  date
+) {
 
-  }
+  const iso =
+    isoDay(date);
+
+
+  return state.tasks
+    .filter(
+      task =>
+        task.status !==
+          'completed' &&
+        task.dueDate === iso
+    );
+
+}
+
+
+function plannerItem(
+  item,
+  type
+) {
+
+  const title =
+    item.title ||
+    item.subject ||
+    'Element';
 
 
   return `
+    <article
+      class="planner-item ${type}"
+    >
 
+      ${
+        item.startTime
+          ? `
+            <small>
+              ${esc(
+                item.startTime
+              )}
+              ${
+                item.endTime
+                  ? `–${esc(
+                      item.endTime
+                    )}`
+                  : ''
+              }
+            </small>
+          `
+          : ''
+      }
+
+
+      <strong>
+        ${esc(title)}
+      </strong>
+
+
+      ${
+        item.subject &&
+        item.subject !== title
+          ? `
+            <span>
+              ${esc(
+                item.subject
+              )}
+            </span>
+          `
+          : ''
+      }
+
+    </article>
+  `;
+
+}
+
+
+function plannerView() {
+
+  const days =
+    plannerWeekDays();
+
+
+  return `
     <div class="page">
+
 
       <div class="toolbar">
 
@@ -3882,85 +5069,60 @@ function plannerView() {
 
         </div>
 
-
-        <button
-          class="btn primary"
-          data-action="recalculate"
-        >
-
-          ${icon(
-            'sparkles',
-            17
-          )}
-
-          Crear pla amb IA
-
-        </button>
-
       </div>
 
 
-      <section
-        class="panel planner-panel"
-      >
+      <section class="panel planner-panel">
 
-        <div
-          class="week-grid"
-        >
+        <div class="panel-head">
+
+          <div>
+
+            <p class="eyebrow">
+              SETMANA ACTUAL
+            </p>
+
+            <h3>
+              Horari i tasques
+            </h3>
+
+          </div>
+
+        </div>
+
+
+        <div class="week-grid">
 
           ${days
             .map(
-              ({ date, iso }) => {
+              date => {
+
+                const events =
+                  plannerDayEvents(
+                    date
+                  );
 
                 const tasks =
-                  state.tasks.filter(
-                    task =>
-                      task.dueDate ===
-                      iso
+                  plannerDayTasks(
+                    date
                   );
 
 
-                const events =
-                  state.scheduleEvents
-                    .filter(
-                      event =>
-                        event.day ===
-                        [
-                          'sunday',
-                          'monday',
-                          'tuesday',
-                          'wednesday',
-                          'thursday',
-                          'friday',
-                          'saturday'
-                        ][
-                          date.getDay()
-                        ]
-                    );
+                const weekday =
+                  weekdayName(
+                    date
+                  );
 
 
                 return `
+                  <div class="week-day">
 
-                  <div
-                    class="week-day"
-                  >
-
-                    <div
-                      class="week-day-head"
-                    >
+                    <div class="week-day-header">
 
                       <span>
-                        ${
-                          new Intl.DateTimeFormat(
-                            'ca-ES',
-                            {
-                              weekday:
-                                'short'
-                            }
-                          ).format(
-                            date
-                          )
-                        }
+                        ${esc(
+                          weekday
+                        )}
                       </span>
 
                       <strong>
@@ -3970,98 +5132,42 @@ function plannerView() {
                     </div>
 
 
-                    <div
-                      class="week-day-body"
-                    >
+                    <div class="week-day-body">
 
                       ${
-                        events
-                          .slice(
-                            0,
-                            3
-                          )
-                          .map(
-                            event => `
-
-                              <div
-                                class="planner-item class"
-                              >
-
-                                <small>
-                                  ${
-                                    esc(
-                                      event.startTime ||
-                                      ''
-                                    )
-                                  }
-                                </small>
-
-                                <strong>
-                                  ${
-                                    esc(
-                                      event.title
-                                    )
-                                  }
-                                >
-
-                              </div>
-
-                            `
-                          )
-                          .join('')
-                      }
-
-
-                      ${
-                        tasks
-                          .slice(
-                            0,
-                            4
-                          )
-                          .map(
-                            task => `
-
-                              <div
-                                class="planner-item task"
-                              >
-
-                                <small>
-                                  Entrega
-                                </small>
-
-                                <strong>
-                                  ${
-                                    esc(
-                                      task.title
-                                    )
-                                  }
-                                >
-
-                              </div>
-
-                            `
-                          )
-                          .join('')
-                      }
-
-
-                      ${
-                        !events.length &&
-                        !tasks.length
+                        events.length ||
+                        tasks.length
                           ? `
-                            <div
-                              class="planner-empty"
-                            >
+                            ${events
+                              .map(
+                                event =>
+                                  plannerItem(
+                                    event,
+                                    'class'
+                                  )
+                              )
+                              .join('')}
+
+                            ${tasks
+                              .map(
+                                task =>
+                                  plannerItem(
+                                    task,
+                                    'task'
+                                  )
+                              )
+                              .join('')}
+                          `
+                          : `
+                            <div class="planner-empty">
                               Lliure
                             </div>
                           `
-                          : ''
                       }
 
                     </div>
 
                   </div>
-
                 `;
 
               }
@@ -4076,121 +5182,110 @@ function plannerView() {
       ${
         state.plan
           ? `
+            <section class="panel ai-plan-panel">
 
-            <section
-              class="panel"
-            >
-
-              <div
-                class="panel-head"
-              >
+              <div class="panel-head">
 
                 <div>
 
                   <p class="eyebrow">
-                    PLA IA
+                    IA
                   </p>
 
-                  <h2>
-                    Recomanació actual
-                  </h2>
+                  <h3>
+                    Pla d’estudi
+                  </h3>
 
                 </div>
 
               </div>
 
 
-              <p
-                class="plan-summary"
-              >
-                ${esc(
-                  state.plan.summary ||
-                  ''
-                )}
-              </p>
+              <div class="ai-plan-content">
+
+                ${
+                  state.plan.summary
+                    ? `
+                      <p>
+                        ${esc(
+                          state.plan.summary
+                        )}
+                      </p>
+                    `
+                    : ''
+                }
 
 
-              ${
-                Array.isArray(
-                  state.plan.sessions
-                )
-                  ? `
-                    <div
-                      class="plan-sessions"
-                    >
+                ${
+                  Array.isArray(
+                    state.plan.sessions
+                  )
+                    ? `
+                      <div class="plan-sessions">
 
-                      ${state.plan.sessions
-                        .map(
-                          session => `
+                        ${state.plan.sessions
+                          .map(
+                            session => `
+                              <article class="plan-session">
 
-                            <div
-                              class="plan-session"
-                            >
+                                <div>
 
-                              <strong>
-                                ${esc(
-                                  session.title ||
-                                  session.subject ||
-                                  'Sessió d’estudi'
-                                )}
-                              </strong>
+                                  <strong>
+                                    ${esc(
+                                      session.title ||
+                                      session.task ||
+                                      'Sessió d’estudi'
+                                    )}
+                                  </strong>
 
-                              <span>
-                                ${
-                                  Number(
-                                    session.minutes ||
-                                    0
-                                  )
-                                } min
-                              </span>
+                                  <span>
+                                    ${esc(
+                                      session.date ||
+                                      ''
+                                    )}
+                                  </span>
 
-                            </div>
+                                </div>
 
-                          `
-                        )
-                        .join('')}
 
-                    </div>
-                  `
-                  : ''
-              }
+                                <b>
+                                  ${
+                                    Number(
+                                      session.minutes ||
+                                      session.duration ||
+                                      0
+                                    )
+                                  } min
+                                </b>
+
+                              </article>
+                            `
+                          )
+                          .join('')}
+
+                      </div>
+                    `
+                    : ''
+                }
+
+              </div>
 
             </section>
-
           `
           : ''
       }
 
     </div>
-
   `;
 
 }
 
 
-/* =========================================================
-   GENERAR PLA IA
-   ========================================================= */
-
 async function recalculatePlan() {
 
-  if (
-    !state.tasks.length &&
-    !state.exams.length
-  ) {
-
-    showToast(
-      'Afegeix tasques o exàmens abans de crear el pla.',
-      'error'
-    );
-
-    return;
-
-  }
-
-
   showToast(
-    'TRIA està preparant el teu pla...'
+    'TRIA està preparant el pla...',
+    'info'
   );
 
 
@@ -4220,7 +5315,10 @@ async function recalculatePlan() {
 
 
     const data =
-      await response.json();
+      await response.json()
+        .catch(
+          () => ({})
+        );
 
 
     if (!response.ok) {
@@ -4240,17 +5338,21 @@ async function recalculatePlan() {
 
     saveState();
 
-    render();
-
     showToast(
-      'Pla actualitzat.'
+      'Pla d’estudi actualitzat.'
     );
+
+    render();
 
   } catch (error) {
 
+    console.error(
+      error
+    );
+
     showToast(
       error.message ||
-      'Error creant el pla.',
+      'No s’ha pogut crear el pla.',
       'error'
     );
 
@@ -4259,40 +5361,105 @@ async function recalculatePlan() {
 }
 
 /* =========================================================
-   CHAT IA
+   PARTE 8 · IA + CHAT
    ========================================================= */
+
+function chatMarkdown(text = '') {
+
+  const safe =
+    esc(
+      String(text)
+    );
+
+
+  return safe
+    .replace(
+      /\*\*(.*?)\*\*/g,
+      '<strong>$1</strong>'
+    )
+    .replace(
+      /\n\n+/g,
+      '</p><p>'
+    )
+    .replace(
+      /\n/g,
+      '<br>'
+    )
+    .replace(
+      /^(.+)$/s,
+      '<p>$1</p>'
+    );
+
+}
+
 
 function chatView() {
 
+  const messages =
+    Array.isArray(
+      state.chat
+    )
+      ? state.chat
+      : [];
+
+
   return `
+    <div class="page">
 
-    <div
-      class="page chat-page"
-    >
 
-      <div
-        class="chat-intro"
-      >
+      <div class="toolbar">
 
-        <p class="eyebrow">
-          ASSISTENT
-        </p>
+        <div>
 
-        <h2>
-          Parla amb TRIA
-        </h2>
+          <p class="eyebrow">
+            ASSISTENT D’ESTUDI
+          </p>
 
-        <p class="muted">
-          Pregunta sobre les teves tasques,
-          exàmens o organització.
-        </p>
+          <h2>
+            IA d’estudi
+          </h2>
+
+          <p class="muted">
+            Parla amb TRIA utilitzant
+            les teves tasques i exàmens.
+          </p>
+
+        </div>
 
       </div>
 
 
-      <section
-        class="chat-panel panel"
-      >
+      <section class="chat-panel">
+
+
+        <header class="chat-head">
+
+          <div class="assistant-avatar">
+            ${icon(
+              'sparkles',
+              17
+            )}
+          </div>
+
+
+          <div>
+
+            <p class="eyebrow">
+              TRIA IA
+            </p>
+
+            <h2>
+              Orientador d’estudi
+            </h2>
+
+            <span>
+              Connectat amb Gemini
+            </span>
+
+          </div>
+
+        </header>
+
 
         <div
           id="chat-messages"
@@ -4300,65 +5467,65 @@ function chatView() {
         >
 
           ${
-            state.chat.length
-
-              ? state.chat
+            messages.length
+              ? messages
                   .map(
                     message => `
-
                       <div
-                        class="chat-message ${
-                          message.role
+                        class="message ${
+                          message.role ===
+                          'user'
+                            ? 'user'
+                            : 'assistant'
                         }"
                       >
 
-                        <div
-                          class="chat-bubble"
-                        >
+                        <div class="message-bubble">
+
                           ${
                             message.role ===
-                            'assistant'
-                              ? chatMarkdown(
-                                  message.content
-                                )
-                              : esc(
-                                  message.content
+                            'user'
+                              ? `
+                                <p>
+                                  ${esc(
+                                    message.text ||
+                                    ''
+                                  )}
+                                </p>
+                              `
+                              : chatMarkdown(
+                                  message.text ||
+                                  ''
                                 )
                           }
+
                         </div>
 
                       </div>
-
                     `
                   )
                   .join('')
-
               : `
+                <div class="chat-empty">
 
-                <div
-                  class="chat-empty"
-                >
-
-                  <div
-                    class="chat-empty-icon"
-                  >
+                  <div class="assistant-avatar">
                     ${icon(
                       'sparkles',
-                      22
+                      20
                     )}
                   </div>
 
-                  <strong>
-                    Com et puc ajudar?
-                  </strong>
+                  <h3>
+                    En què et puc ajudar?
+                  </h3>
 
-                  <span>
-                    Per exemple: «Què hauria
-                    de fer primer aquesta setmana?»
-                  </span>
+                  <p>
+                    Pots preguntar-me què estudiar
+                    primer, com repartir el temps
+                    o com preparar un examen.
+                  </p>
 
                 </div>
-
               `
           }
 
@@ -4372,41 +5539,36 @@ function chatView() {
 
           <input
             id="chat-input"
+            name="message"
             type="text"
             autocomplete="off"
-            placeholder="Escriu la teva pregunta..."
+            placeholder="Pregunta a TRIA..."
+            aria-label="Pregunta a TRIA"
             required
           >
 
 
           <button
-            class="btn primary"
             type="submit"
+            class="btn primary"
+            aria-label="Enviar missatge"
           >
-
             ${icon(
               'arrow',
-              17
+              16
             )}
-
-            Enviar
-
           </button>
 
         </form>
 
+
       </section>
 
     </div>
-
   `;
 
 }
 
-
-/* =========================================================
-   ENVIAR CHAT
-   ========================================================= */
 
 async function sendChatMessage(
   message
@@ -4414,18 +5576,40 @@ async function sendChatMessage(
 
   const clean =
     String(
-      message || ''
+      message ||
+      ''
     ).trim();
 
 
   if (!clean) {
+
     return;
+
+  }
+
+
+  if (
+    !Array.isArray(
+      state.chat
+    )
+  ) {
+
+    state.chat = [];
+
   }
 
 
   state.chat.push({
-    role: 'user',
-    content: clean
+
+    role:
+      'user',
+
+    text:
+      clean,
+
+    createdAt:
+      new Date().toISOString()
+
   });
 
 
@@ -4460,12 +5644,16 @@ async function sendChatMessage(
                 state.exams
 
             })
-        }
-      );
+
+          }
+        );
 
 
     const data =
-      await response.json();
+      await response.json()
+        .catch(
+          () => ({})
+        );
 
 
     if (!response.ok) {
@@ -4478,14 +5666,22 @@ async function sendChatMessage(
     }
 
 
+    const answer =
+      data.answer ||
+      data.text ||
+      'No he pogut generar una resposta.';
+
+
     state.chat.push({
 
       role:
         'assistant',
 
-      content:
-        data.answer ||
-        'No he pogut generar una resposta.'
+      text:
+        String(answer),
+
+      createdAt:
+        new Date().toISOString()
 
     });
 
@@ -4497,15 +5693,21 @@ async function sendChatMessage(
 
   } catch (error) {
 
+    console.error(
+      error
+    );
+
+
     state.chat.push({
 
       role:
         'assistant',
 
-      content:
-        `No he pogut respondre ara mateix: ${
-          error.message
-        }`
+      text:
+        `No he pogut respondre ara mateix. ${error.message || ''}`.trim(),
+
+      createdAt:
+        new Date().toISOString()
 
     });
 
@@ -4518,76 +5720,118 @@ async function sendChatMessage(
 
 }
 
+
 /* =========================================================
-   PROGRÉS
+   MISSATGE DE BENvinguda
    ========================================================= */
 
-function progressView() {
+function ensureWelcomeMessage() {
+
+  if (
+    !Array.isArray(
+      state.chat
+    )
+  ) {
+
+    state.chat = [];
+
+  }
+
+
+  /*
+   * No afegim cap missatge automàtic.
+   * La pantalla inicial queda neta.
+   */
+
+}
+
+/* =========================================================
+   PARTE 9 · PROGRÉS
+   ========================================================= */
+
+function formatMinutes(
+  minutes
+) {
 
   const total =
-    state.tasks.length;
-
-  const completed =
-    state.tasks.filter(
-      task =>
-        task.status ===
-        'completed'
-    ).length;
-
-
-  const pending =
-    total -
-    completed;
-
-
-  const minutes =
-    state.tasks.reduce(
-      (sum, task) =>
-        sum +
-        Number(
-          task.minutes || 0
-        ),
-      0
+    Math.max(
+      0,
+      Number(minutes) || 0
     );
 
 
+  const hours =
+    Math.floor(
+      total / 60
+    );
+
+
+  const mins =
+    total % 60;
+
+
+  if (!hours) {
+
+    return `${mins} min`;
+
+  }
+
+
+  if (!mins) {
+
+    return `${hours} h`;
+
+  }
+
+
+  return `${hours} h ${mins} min`;
+
+}
+
+
+function progressView() {
+
+  const totalTasks =
+    state.tasks.length;
+
+  const completed =
+    completedTasks().length;
+
+  const pending =
+    pendingTasks().length;
+
+  const percent =
+    progressPercent();
+
+  const plannedMinutes =
+    totalTaskMinutes();
+
   const completedMinutes =
-    state.tasks
-      .filter(
-        task =>
-          task.status ===
-          'completed'
-      )
-      .reduce(
-        (sum, task) =>
-          sum +
-          Number(
-            task.minutes || 0
-          ),
-        0
-      );
+    completedTaskMinutes();
 
 
-  const percentage =
-    total
-      ? Math.round(
-          completed /
-          total *
-          100
-        )
-      : 0;
+  const remainingMinutes =
+    Math.max(
+      0,
+      plannedMinutes -
+      completedMinutes
+    );
+
+
+  const exams =
+    state.exams.length;
 
 
   return `
-
     <div class="page">
+
 
       <div class="toolbar">
 
         <div>
 
           <p class="eyebrow">
-            EVOLUCIÓ
+            SEGUIMENT
           </p>
 
           <h2>
@@ -4595,8 +5839,8 @@ function progressView() {
           </h2>
 
           <p class="muted">
-            Una visió senzilla de la feina
-            que ja has fet.
+            Una visió senzilla de com avança
+            el teu estudi.
           </p>
 
         </div>
@@ -4604,163 +5848,308 @@ function progressView() {
       </div>
 
 
-      <div
-        class="stats-grid"
-      >
+      <section class="stats-grid progress-grid">
 
         ${statCard(
-          'Tasques totals',
-          total,
-          `${completed} completades`,
-          'tasks'
-        )}
-
-        ${statCard(
-          'Pendents',
-          pending,
-          'Per acabar',
-          'clock'
-        )}
-
-        ${statCard(
-          'Temps completat',
-          `${completedMinutes} min`,
-          `de ${minutes} min previstos`,
-          'check'
-        )}
-
-        ${statCard(
-          'Progrés',
-          `${percentage}%`,
+          'check',
           'Tasques completades',
-          'progress'
+          `${completed}`,
+          `de ${totalTasks}`
         )}
 
-      </div>
+        ${statCard(
+          'tasks',
+          'Tasques pendents',
+          `${pending}`,
+          'Per completar'
+        )}
 
+        ${statCard(
+          'clock',
+          'Temps completat',
+          formatMinutes(
+            completedMinutes
+          ),
+          `de ${formatMinutes(
+            plannedMinutes
+          )}`
+        )}
 
-      <section
-        class="panel progress-panel"
-      >
-
-        <div
-          class="panel-head"
-        >
-
-          <div>
-
-            <p class="eyebrow">
-              OBJECTIU
-            </p>
-
-            <h2>
-              Progrés general
-            </h2>
-
-          </div>
-
-          <strong
-            class="progress-number"
-          >
-            ${percentage}%
-          </strong>
-
-        </div>
-
-
-        <div
-          class="progress-track"
-        >
-
-          <div
-            class="progress-fill"
-            style="width:${percentage}%"
-          ></div>
-
-        </div>
-
-
-        <p class="muted">
-          ${
-            percentage === 100
-              ? 'Has completat totes les tasques.'
-              : `Has completat ${completed} de ${total} tasques.`
-          }
-        </p>
+        ${statCard(
+          'exams',
+          'Exàmens registrats',
+          `${exams}`,
+          'En total'
+        )}
 
       </section>
 
 
-      <section
-        class="panel"
-      >
+      <section class="progress-layout">
 
-        <div
-          class="panel-head"
-        >
+
+        <article class="panel progress-main">
+
+          <div class="panel-head">
+
+            <div>
+
+              <p class="eyebrow">
+                OBJECTIU
+              </p>
+
+              <h3>
+                Progrés de les tasques
+              </h3>
+
+            </div>
+
+
+            <strong class="progress-big">
+              ${percent}%
+            </strong>
+
+          </div>
+
+
+          <div class="progress-track">
+
+            <div
+              class="progress-fill"
+              style="width:${percent}%"
+            ></div>
+
+          </div>
+
+
+          <div class="progress-details">
+
+            <div>
+
+              <span>
+                Completades
+              </span>
+
+              <strong>
+                ${completed}
+              </strong>
+
+            </div>
+
+
+            <div>
+
+              <span>
+                Pendents
+              </span>
+
+              <strong>
+                ${pending}
+              </strong>
+
+            </div>
+
+
+            <div>
+
+              <span>
+                Temps restant
+              </span>
+
+              <strong>
+                ${formatMinutes(
+                  remainingMinutes
+                )}
+              </strong>
+
+            </div>
+
+          </div>
+
+        </article>
+
+
+        <article class="panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <p class="eyebrow">
+                ACTIVITAT
+              </p>
+
+              <h3>
+                Resum
+              </h3>
+
+            </div>
+
+          </div>
+
+
+          <div class="activity-list">
+
+            <div class="activity-row">
+
+              <span>
+                Tasques totals
+              </span>
+
+              <strong>
+                ${totalTasks}
+              </strong>
+
+            </div>
+
+
+            <div class="activity-row">
+
+              <span>
+                Exàmens
+              </span>
+
+              <strong>
+                ${exams}
+              </strong>
+
+            </div>
+
+
+            <div class="activity-row">
+
+              <span>
+                Temps planificat
+              </span>
+
+              <strong>
+                ${formatMinutes(
+                  plannedMinutes
+                )}
+              </strong>
+
+            </div>
+
+
+            <div class="activity-row">
+
+              <span>
+                Temps completat
+              </span>
+
+              <strong>
+                ${formatMinutes(
+                  completedMinutes
+                )}
+              </strong>
+
+            </div>
+
+          </div>
+
+        </article>
+
+
+      </section>
+
+
+      <section class="panel">
+
+        <div class="panel-head">
 
           <div>
 
             <p class="eyebrow">
-              TASQUES
+              ÚLTIMES TASQUES
             </p>
 
-            <h2>
+            <h3>
               Activitat recent
-            </h2>
+            </h3>
 
           </div>
 
         </div>
 
 
-        <div class="list">
+        ${
+          state.tasks.length
+            ? `
+              <div class="dashboard-task-list">
 
-          ${
-            state.tasks.length
-
-              ? [...state.tasks]
-                  .sort(
-                    (a, b) =>
-                      b.dueDate.localeCompare(
-                        a.dueDate
+                ${sortTasks(
+                  state.tasks
+                )
+                  .slice(0, 5)
+                  .map(
+                    task =>
+                      taskCard(
+                        task,
+                        true
                       )
                   )
-                  .slice(
-                    0,
-                    6
-                  )
-                  .map(
-                    taskCard
-                  )
-                  .join('')
+                  .join('')}
 
-              : emptyState(
-                  'Sense activitat',
-                  'Quan afegeixis tasques apareixeran aquí.'
-                )
-          }
+              </div>
+            `
+            : `
+              <div class="panel-empty">
 
-        </div>
+                ${icon(
+                  'tasks',
+                  20
+                )}
+
+                <strong>
+                  Encara no hi ha activitat.
+                </strong>
+
+                <span>
+                  Crea una tasca per començar.
+                </span>
+
+              </div>
+            `
+        }
 
       </section>
 
-    </div>
 
+    </div>
   `;
 
 }
 
 
 /* =========================================================
-   AVALUACIÓ
+   PARTE 9 · AVALUACIÓ
    ========================================================= */
 
 function settingsView() {
 
-  return `
+  const totalTasks =
+    state.tasks.length;
 
+  const completed =
+    completedTasks().length;
+
+  const exams =
+    state.exams.length;
+
+  const schedule =
+    state.scheduleEvents.length;
+
+  const chatMessages =
+    Array.isArray(
+      state.chat
+    )
+      ? state.chat.length
+      : 0;
+
+
+  return `
     <div class="page">
+
 
       <div class="toolbar">
 
@@ -4771,12 +6160,12 @@ function settingsView() {
           </p>
 
           <h2>
-            Ús de TRIA
+            Activitat de TRIA
           </h2>
 
           <p class="muted">
-            Informació bàsica sobre com
-            utilitzes l’organitzador.
+            Resum de les dades generades
+            durant l’ús de l’aplicació.
           </p>
 
         </div>
@@ -4784,71 +6173,95 @@ function settingsView() {
       </div>
 
 
-      <section
-        class="panel"
-      >
+      <section class="stats-grid">
 
-        <div
-          class="evaluation-grid"
-        >
+        ${statCard(
+          'tasks',
+          'Tasques',
+          `${totalTasks}`,
+          `${completed} completades`
+        )}
 
-          <div
-            class="evaluation-card"
-          >
+        ${statCard(
+          'exams',
+          'Exàmens',
+          `${exams}`,
+          'Registrats'
+        )}
 
-            <span>
-              Tasques creades
-            </span>
+        ${statCard(
+          'calendar',
+          'Elements d’horari',
+          `${schedule}`,
+          'Detectats'
+        )}
 
-            <strong>
-              ${state.tasks.length}
-            </strong>
+        ${statCard(
+          'chat',
+          'Missatges IA',
+          `${chatMessages}`,
+          'Converses'
+        )}
+
+      </section>
+
+
+      <section class="settings-layout">
+
+
+        <article class="panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <p class="eyebrow">
+                RECOMANACIONS
+              </p>
+
+              <h3>
+                Decisions d’estudi
+              </h3>
+
+            </div>
 
           </div>
 
 
-          <div
-            class="evaluation-card"
-          >
+          <div class="setting-row">
 
             <span>
-              Tasques completades
+              IA activa
             </span>
 
             <strong>
               ${
-                state.tasks.filter(
-                  task =>
-                    task.status ===
-                    'completed'
-                ).length
+                state.settings.aiEnabled
+                  ? 'Sí'
+                  : 'No'
               }
             </strong>
 
           </div>
 
 
-          <div
-            class="evaluation-card"
-          >
+          <div class="setting-row">
 
             <span>
-              Exàmens registrats
+              Tasques completades
             </span>
 
             <strong>
-              ${state.exams.length}
+              ${completed}
             </strong>
 
           </div>
 
 
-          <div
-            class="evaluation-card"
-          >
+          <div class="setting-row">
 
             <span>
-              Recomanació IA
+              Plans generats
             </span>
 
             <strong>
@@ -4857,92 +6270,71 @@ function settingsView() {
                   ? 'Sí'
                   : 'Encara no'
               }
+              
+
+
             </strong>
 
           </div>
 
-        </div>
+        </article>
+
+
+        <article class="panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <p class="eyebrow">
+                TRAÇABILITAT
+              </p>
+
+              <h3>
+                Dades de l’activitat
+              </h3>
+
+            </div>
+
+          </div>
+
+
+          <p class="muted">
+            TRIA utilitza les tasques,
+            els exàmens, l’horari i les
+            interaccions amb la IA per
+            construir les recomanacions
+            d’estudi.
+          </p>
+
+
+          <div class="evaluation-note">
+
+            ${icon(
+              'info',
+              16
+            )}
+
+            <span>
+              Aquest resum és local a
+              aquesta sessió de TRIA.
+            </span>
+
+          </div>
+
+        </article>
+
 
       </section>
 
-
-      <section
-        class="panel"
-      >
-
-        <div
-          class="panel-head"
-        >
-
-          <div>
-
-            <p class="eyebrow">
-              REGISTRE
-            </p>
-
-            <h2>
-              Dades de l’activitat
-            </h2>
-
-          </div>
-
-        </div>
-
-
-        <div
-          class="evaluation-list"
-        >
-
-          <div>
-            Recomanació generada:
-            ${
-              state.plan
-                ? 'Sí'
-                : 'No'
-            }
-          </div>
-
-          <div>
-            Converses amb IA:
-            ${state.chat.length}
-          </div>
-
-          <div>
-            Elements d’horari:
-            ${state.scheduleEvents.length}
-          </div>
-
-        </div>
-
-      </section>
-
-
-      <section
-        class="panel evaluation-note"
-      >
-
-        <p>
-          TRIA utilitza aquestes dades per
-          organitzar l’estudi i mostrar el
-          progrés dins de l’aplicació.
-        </p>
-
-        <p class="muted">
-          Evita introduir informació personal
-          que no sigui necessària per a
-          l’organització acadèmica.
-        </p>
-
-      </section>
 
     </div>
-
   `;
 
 }
 
 /* =========================================================
-   VISTES
+   PARTE 10 · VISTES
    ========================================================= */
 
 const views = {
@@ -4981,39 +6373,41 @@ const views = {
 function render() {
 
   const root =
-    document.querySelector(
-      '#root'
-    );
+    getRoot();
 
 
   if (!root) {
+
     return;
+
   }
 
 
   if (!authReady) {
 
     root.innerHTML = `
+      <main class="auth-screen">
 
-      <div class="loading-screen">
+        <div class="auth-loading">
 
-        <div class="brand-mark">
-          ${icon(
-            'sparkles',
-            24
-          )}
+          <div class="brand-mark">
+            ${icon(
+              'sparkles',
+              18
+            )}
+          </div>
+
+          <strong>
+            ${APP_NAME}
+          </strong>
+
+          <span>
+            Carregant...
+          </span>
+
         </div>
 
-        <strong>
-          TRIA
-        </strong>
-
-        <span>
-          Carregant...
-        </span>
-
-      </div>
-
+      </main>
     `;
 
     return;
@@ -5026,30 +6420,22 @@ function render() {
     root.innerHTML =
       authView();
 
+    bindAuthEvents();
+
     return;
 
   }
 
 
-  root.innerHTML =
-    layout();
-
-
-  const content =
-    document.querySelector(
-      '#content'
-    );
-
-
   const view =
-    views[
-      currentPage
-    ] ||
+    views[currentPage] ||
     dashboardView;
 
 
-  content.innerHTML =
-    view();
+  root.innerHTML =
+    layout(
+      view()
+    );
 
 
   bindPageEvents();
@@ -5058,113 +6444,55 @@ function render() {
 
 
 /* =========================================================
-   MODAL
+   AUTH EVENTS
    ========================================================= */
 
-function closeModal() {
+function bindAuthEvents() {
 
-  const modal =
+  const form =
     document.querySelector(
-      '#modal'
+      '#auth-form'
     );
 
 
-  if (!modal) {
-    return;
-  }
+  if (form) {
 
-
-  modal.classList.add(
-    'hidden'
-  );
-
-
-  modalMode =
-    null;
-
-  editingId =
-    null;
-
-}
-
-
-/* =========================================================
-   TOAST
-   ========================================================= */
-
-function showToast(
-  message,
-  type = 'normal'
-) {
-
-  let toast =
-    document.querySelector(
-      '.tria-toast'
-    );
-
-
-  if (!toast) {
-
-    toast =
-      document.createElement(
-        'div'
-      );
-
-    toast.className =
-      'tria-toast';
-
-    document.body.appendChild(
-      toast
+    form.addEventListener(
+      'submit',
+      handleAuth
     );
 
   }
 
 
-  toast.className =
-    `tria-toast ${type}`;
-
-
-  toast.textContent =
-    message;
-
-
-  requestAnimationFrame(
-    () => {
-      toast.classList.add(
-        'show'
-      );
-    }
-  );
-
-
-  clearTimeout(
-    toast._timeout
-  );
-
-
-  toast._timeout =
-    setTimeout(
-      () => {
-
-        toast.classList.remove(
-          'show'
-        );
-
-      },
-      3000
+  const toggle =
+    document.querySelector(
+      '[data-action="toggle-auth"]'
     );
+
+
+  if (toggle) {
+
+    toggle.addEventListener(
+      'click',
+      toggleAuthMode
+    );
+
+  }
 
 }
 
 
 /* =========================================================
-   EVENTOS GENERALS
+   EVENTOS PRINCIPALES
    ========================================================= */
 
 function bindPageEvents() {
 
 
-  /* NAVEGACIÓ */
+  /* -------------------------------------------------------
+     NAVEGACIÓ
+     ------------------------------------------------------- */
 
   document
     .querySelectorAll(
@@ -5177,8 +6505,395 @@ function bindPageEvents() {
           'click',
           () => {
 
-            currentPage =
+            const page =
               button.dataset.page;
+
+
+            if (
+              !views[page]
+            ) {
+
+              return;
+
+            }
+
+
+            currentPage =
+              page;
+
+            closeModal();
+
+            render();
+
+            window.scrollTo({
+              top: 0,
+              behavior: 'smooth'
+            });
+
+          }
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     LOGOUT
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="logout"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          logout
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     NOVA TASCA
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="new-task"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () =>
+            openTaskModal()
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     EDITAR TASCA
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="edit-task"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () =>
+            openTaskModal(
+              button.dataset.id
+            )
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     GUARDAR TASCA
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="save-task"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          saveTaskFromForm
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     COMPLETAR TASCA
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="toggle-task"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () =>
+            toggleTask(
+              button.dataset.id
+            )
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     ELIMINAR TASCA
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="delete-task"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () =>
+            deleteTask(
+              button.dataset.id
+            )
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     NOU EXAMEN
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="new-exam"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () =>
+            openExamModal()
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     EDITAR EXAMEN
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="edit-exam"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () =>
+            openExamModal(
+              button.dataset.id
+            )
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     GUARDAR EXAMEN
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="save-exam"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          saveExamFromForm
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     ELIMINAR EXAMEN
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="delete-exam"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () =>
+            deleteExam(
+              button.dataset.id
+            )
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     CERRAR MODAL
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="close-modal"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          closeModal
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     RECALCULAR PLAN
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="recalculate-plan"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          recalculatePlan
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     SUBIR HORARIO
+     ------------------------------------------------------- */
+
+  const scheduleInput =
+    document.querySelector(
+      '#schedule-image'
+    );
+
+
+  if (scheduleInput) {
+
+    scheduleInput.addEventListener(
+      'change',
+      event => {
+
+        const file =
+          event.target.files?.[0];
+
+
+        if (file) {
+
+          handleScheduleImage(
+            file
+          );
+
+        }
+
+
+        event.target.value =
+          '';
+
+      }
+    );
+
+  }
+
+
+  /* -------------------------------------------------------
+     BOTÓN ANALIZAR HORARIO
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="scroll-schedule-upload"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () => {
+
+            scrollToElement(
+              '#schedule-upload'
+            );
+
+          }
+        );
+
+      }
+    );
+
+
+  /* -------------------------------------------------------
+     LIMPIAR HORARIO
+     ------------------------------------------------------- */
+
+  document
+    .querySelectorAll(
+      '[data-action="clear-schedule"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () => {
+
+            const confirmed =
+              window.confirm(
+                'Vols eliminar tot l’horari?'
+              );
+
+
+            if (!confirmed) {
+
+              return;
+
+            }
+
+
+            state.scheduleEvents =
+              [];
+
+            saveState();
+
+            showToast(
+              'Horari eliminat.'
+            );
 
             render();
 
@@ -5189,157 +6904,52 @@ function bindPageEvents() {
     );
 
 
-  /* ACCIONS */
+  /* -------------------------------------------------------
+     GUARDAR REVISIÓ HORARI
+     ------------------------------------------------------- */
 
   document
     .querySelectorAll(
-      '[data-action]'
+      '[data-action="save-schedule-review"]'
     )
     .forEach(
-      element => {
+      button => {
 
-        element.addEventListener(
+        button.addEventListener(
           'click',
-          async () => {
-
-            const action =
-              element.dataset.action;
-
-            const id =
-              element.dataset.id;
-
-
-            switch (action) {
-
-
-              case 'logout':
-
-                await logout();
-
-                break;
-
-
-              case 'toggle-auth':
-
-                toggleAuthMode();
-
-                break;
-
-
-              case 'new-task':
-
-                openTaskModal();
-
-                break;
-
-
-              case 'edit-task':
-
-                openTaskModal(
-                  id
-                );
-
-                break;
-
-
-              case 'delete-task':
-
-                deleteTask(
-                  id
-                );
-
-                break;
-
-
-              case 'toggle-task':
-
-                toggleTask(
-                  id
-                );
-
-                break;
-
-
-              case 'new-exam':
-
-                openExamModal();
-
-                break;
-
-
-              case 'edit-exam':
-
-                openExamModal(
-                  id
-                );
-
-                break;
-
-
-              case 'delete-exam':
-
-                deleteExam(
-                  id
-                );
-
-                break;
-
-
-              case 'close-modal':
-
-                closeModal();
-
-                break;
-
-
-              case 'recalculate':
-
-                await recalculatePlan();
-
-                break;
-
-
-              case 'remove-review-event':
-
-                pendingScheduleEvents.splice(
-                  Number(
-                    element.dataset.index
-                  ),
-                  1
-                );
-
-                openScheduleReview();
-
-                break;
-
-            }
-
-          }
+          saveScheduleReview
         );
 
       }
     );
 
 
-  /* LOGIN */
+  /* -------------------------------------------------------
+     ELIMINAR ELEMENT DE REVISIÓ
+     ------------------------------------------------------- */
 
-  const authForm =
-    document.querySelector(
-      '#auth-form'
+  document
+    .querySelectorAll(
+      '[data-action="remove-review-event"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () =>
+            removeReviewEvent(
+              button.dataset.index
+            )
+        );
+
+      }
     );
 
 
-  if (authForm) {
-
-    authForm.addEventListener(
-      'submit',
-      handleAuth
-    );
-
-  }
-
-
-  /* CHAT */
+  /* -------------------------------------------------------
+     CHAT
+     ------------------------------------------------------- */
 
   const chatForm =
     document.querySelector(
@@ -5367,7 +6977,9 @@ function bindPageEvents() {
 
 
         if (!message) {
+
           return;
+
         }
 
 
@@ -5385,49 +6997,52 @@ function bindPageEvents() {
   }
 
 
-  /* HORARI */
+  /* -------------------------------------------------------
+     BOTONS LINK
+     ------------------------------------------------------- */
 
-  const scheduleInput =
-    document.querySelector(
-      '#schedule-image'
-    );
+  document
+    .querySelectorAll(
+      '.link-btn[data-page]'
+    )
+    .forEach(
+      button => {
 
+        button.addEventListener(
+          'click',
+          () => {
 
-  if (scheduleInput) {
-
-    scheduleInput.addEventListener(
-      'change',
-      async event => {
-
-        const file =
-          event.target.files?.[0];
-
-
-        if (!file) {
-          return;
-        }
+            const page =
+              button.dataset.page;
 
 
-        await handleScheduleImage(
-          file
+            if (
+              !views[page]
+            ) {
+
+              return;
+
+            }
+
+
+            currentPage =
+              page;
+
+            render();
+
+          }
         );
-
-
-        event.target.value =
-          '';
 
       }
     );
 
-  }
 
-
-  /* MODAL BACKDROP */
+  /* -------------------------------------------------------
+     MODAL BACKDROP
+     ------------------------------------------------------- */
 
   const modal =
-    document.querySelector(
-      '#modal'
-    );
+    getModal();
 
 
   if (modal) {
@@ -5451,27 +7066,6 @@ function bindPageEvents() {
   }
 
 }
-
-
-/* =========================================================
-   TECLAT
-   ========================================================= */
-
-document.addEventListener(
-  'keydown',
-  event => {
-
-    if (
-      event.key ===
-      'Escape'
-    ) {
-
-      closeModal();
-
-    }
-
-  }
-);
 
 
 /* =========================================================
