@@ -7036,7 +7036,88 @@ function bindPageEvents() {
       }
     );
 
+  /* -------------------------------------------------------
+     FRASES DEL PROFESSORAT
+     ------------------------------------------------------- */
 
+  document
+    .querySelectorAll(
+      '[data-action="teacher-prev"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () => {
+
+            teacherQuoteIndex =
+              (
+                teacherQuoteIndex -
+                1 +
+                teacherQuotes.length
+              ) %
+              teacherQuotes.length;
+
+            render();
+
+          }
+        );
+
+      }
+    );
+
+
+  document
+    .querySelectorAll(
+      '[data-action="teacher-next"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () => {
+
+            teacherQuoteIndex =
+              (
+                teacherQuoteIndex +
+                1
+              ) %
+              teacherQuotes.length;
+
+            render();
+
+          }
+        );
+
+      }
+    );
+
+
+  document
+    .querySelectorAll(
+      '[data-action="teacher-dot"]'
+    )
+    .forEach(
+      button => {
+
+        button.addEventListener(
+          'click',
+          () => {
+
+            teacherQuoteIndex =
+              Number(
+                button.dataset.index
+              ) || 0;
+
+            render();
+
+          }
+        );
+
+      }
+    );
   /* -------------------------------------------------------
      MODAL BACKDROP
      ------------------------------------------------------- */
@@ -7073,3 +7154,79 @@ function bindPageEvents() {
    ========================================================= */
 
 initAuth();
+
+
+function teacherQuoteView() {
+  const quote = teacherQuotes[teacherQuoteIndex];
+
+  return `
+    <section class="teacher-note">
+
+      <div class="teacher-note-header">
+        <div>
+          <p class="eyebrow">L'OPINIÓ DEL PROFESSORAT</p>
+
+          <h3>
+            El que diuen els teus professors
+          </h3>
+        </div>
+
+        <span class="teacher-note-icon">
+          ${icon('book-open', 19)}
+        </span>
+      </div>
+
+      <div class="teacher-quote-wrap">
+
+        <button
+          class="teacher-arrow"
+          data-action="teacher-prev"
+          aria-label="Frase anterior"
+          ${teacherQuotes.length <= 1 ? 'disabled' : ''}
+        >
+          ${icon('chevron-left', 17)}
+        </button>
+
+        <blockquote>
+          <span class="quote-mark">“</span>
+          <span class="teacher-quote-text">${escapeHtml(quote)}</span>
+          <span class="quote-mark closing">”</span>
+        </blockquote>
+
+        <button
+          class="teacher-arrow"
+          data-action="teacher-next"
+          aria-label="Frase següent"
+          ${teacherQuotes.length <= 1 ? 'disabled' : ''}
+        >
+          ${icon('chevron-right', 17)}
+        </button>
+
+      </div>
+
+      <div class="teacher-note-footer">
+
+        <span>
+          Professorat de TRIA
+        </span>
+
+        <div class="teacher-dots">
+          ${teacherQuotes.map((_, index) => `
+            <button
+              class="teacher-dot ${index === teacherQuoteIndex ? 'active' : ''}"
+              data-action="teacher-dot"
+              data-index="${index}"
+              aria-label="Veure frase ${index + 1}"
+            ></button>
+          `).join('')}
+        </div>
+
+        <span>
+          ${teacherQuoteIndex + 1} / ${teacherQuotes.length}
+        </span>
+
+      </div>
+
+    </section>
+  `;
+}
