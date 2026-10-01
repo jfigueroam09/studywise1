@@ -154,10 +154,90 @@ Reglas:
 
     const result = JSON.parse(text);
 
+    function normalizeTime(value) {
+      const raw = String(value ?? '').trim();
+
+      if (!raw) {
+        return '';
+      }
+
+      let match = raw.match(
+        /^(?:[01]?\d|2[0-3]):([0-5]\d)$/
+      );
+
+      if (match) {
+        const [hour, minute] = raw.split(':');
+
+        return `${hour.padStart(2, '0')}:${minute}`;
+      }
+
+      const compact = raw
+        .toLowerCase()
+        .replace(/\s+/g, '')
+        .replace(/[.,h]/g, ':');
+
+      match = compact.match(/^(\d{1,2}):(\d{2})$/);
+
+      if (match) {
+        const hour = Number(match[1]);
+        const minute = Number(match[2]);
+
+        if (
+          hour >= 0 &&
+          hour <= 23 &&
+          minute >= 0 &&
+          minute <= 59
+        ) {
+          return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+        }
+      }
+
+      return '';
+    }
+
+    const allowedDays = new Set([
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday'
+    ]);
+
+    const events = Array.isArray(result.events)
+      ? result.events
+          .map(event => ({
+            title: String(event?.title || '').trim(),
+            subject: String(event?.subject || '').trim(),
+
+            day: allowedDays.has(event?.day)
+              ? event.day
+              : '',
+
+            startTime: normalizeTime(event?.startTime),
+            endTime: normalizeTime(event?.endTime),
+
+            type: [
+              'class',
+              'exam',
+              'study',
+              'personal'
+            ].includes(event?.type)
+              ? event.type
+              : 'class',
+
+            notes: String(event?.notes || '').trim()
+          }))
+          .filter(event =>
+            event.title &&
+            event.day &&
+            event.startTime &&
+            event.endTime &&
+            event.endTime > event.startTime
+          )
+      : [];
+
     return res.status(200).json({
-      events: Array.isArray(result.events)
-        ? result.events
-        : []
+      events
     });
 
   } catch (error) {
