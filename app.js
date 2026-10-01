@@ -512,9 +512,92 @@ function icon(name, size = 18) {
     </svg>
   `;
 }
+
+
+/* =========================================================
+   TAULER
+   ========================================================= */
+
+function dashboardView() {
+
+  const pending =
+    state.tasks.filter(
+      task =>
+        task.status !== 'completed'
+    );
+
+  const completed =
+    state.tasks.filter(
+      task =>
+        task.status === 'completed'
+    );
+
+  const upcomingExams =
+    [...state.exams]
+      .filter(
+        exam =>
+          exam.date >= todayISO()
+      )
+      .sort(
+        (a, b) =>
+          a.date.localeCompare(
+            b.date
+          )
+      )
+      .slice(0, 5);
+
+  const urgent =
+    pending
+      .filter(
+        task =>
+          daysUntil(task.dueDate) <= 2
+      )
+      .sort(
+        (a, b) =>
+          a.dueDate.localeCompare(
+            b.dueDate
+          )
+      );
+
+  const totalMinutes =
+    state.tasks.reduce(
+      (sum, task) =>
+        sum +
+        Number(
+          task.minutes || 0
+        ),
+      0
+    );
+
+  const completedMinutes =
+    completed.reduce(
+      (sum, task) =>
+        sum +
+        Number(
+          task.minutes || 0
+        ),
+      0
+    );
+
+  const percent =
+    totalMinutes > 0
+      ? Math.round(
+          (
+            completedMinutes /
+            totalMinutes
+          ) * 100
+        )
+      : 0;
+
+  return `
+
           <button
             class="btn primary"
             data-action="recalculate"
+          >
+            ${icon('sparkles', 17)}
+            Recalcular amb IA
+          </button>
           >
             ${icon('sparkles', 17)}
             Recalcular amb IA
