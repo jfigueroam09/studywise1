@@ -7218,10 +7218,8 @@ function bindPageEvents() {
    ========================================================= */
 
 initAuth();
-
 function teacherQuoteView() {
-  const quote =
-    teacherQuotes[teacherQuoteIndex];
+  const quote = teacherQuotes[teacherQuoteIndex];
 
   return `
     <section class="teacher-note">
@@ -7234,7 +7232,6 @@ function teacherQuoteView() {
         </div>
       </div>
 
-
       <div class="teacher-quote-wrap">
 
         <button
@@ -7245,23 +7242,11 @@ function teacherQuoteView() {
           ${icon('chevron-left', 17)}
         </button>
 
-
         <blockquote>
-
-          <span class="quote-mark">
-            “
-          </span>
-
-          <span class="teacher-quote-text">
-            ${esc(quote)}
-          </span>
-
-          <span class="quote-mark closing">
-            ”
-          </span>
-
+          <span class="quote-mark">“</span>
+          <span class="teacher-quote-text">${esc(quote)}</span>
+          <span class="quote-mark closing">”</span>
         </blockquote>
-
 
         <button
           class="teacher-arrow"
@@ -7273,16 +7258,13 @@ function teacherQuoteView() {
 
       </div>
 
-
       <div class="teacher-note-footer">
 
         <span>
           Professorat
         </span>
 
-
         <div class="teacher-dots">
-
           ${teacherQuotes.map((_, index) => `
             <button
               class="teacher-dot ${index === teacherQuoteIndex ? 'active' : ''}"
@@ -7291,9 +7273,7 @@ function teacherQuoteView() {
               aria-label="Veure frase ${index + 1}"
             ></button>
           `).join('')}
-
         </div>
-
 
         <span>
           ${teacherQuoteIndex + 1} / ${teacherQuotes.length}
