@@ -1,12 +1,24 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const SUPABASE_URL = 'https://tzyslkglsywfiwuhtgrj.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_2SIxbdP7otKw74QV4s4J5g_K39-PjkG';
+/* =========================================================
+   TRIA · CONFIGURACIÓ
+   ========================================================= */
+
+const SUPABASE_URL =
+  'https://tzyslkglsywfiwuhtgrj.supabase.co';
+
+const SUPABASE_PUBLISHABLE_KEY =
+  'sb_publishable_2SIxbdP7otKw74QV4s4J5g_K39-PjkG';
 
 const supabase = createClient(
   SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY
 );
+
+
+/* =========================================================
+   ESTAT LOCAL
+   ========================================================= */
 
 const KEY = 'tria';
 
@@ -21,33 +33,271 @@ const defaultState = {
 };
 
 let state = loadState();
+
 let currentPage = 'dashboard';
+
 let modalMode = null;
+
 let editingId = null;
+
+let currentUser = null;
+
+let authReady = false;
+
+let authMode = 'login';
+
+
+/* =========================================================
+   AUTENTICACIÓ
+   ========================================================= */
 
 function loadState() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return structuredClone(defaultState);
+
+    if (!raw) {
+      return structuredClone(defaultState);
+    }
 
     return {
       ...structuredClone(defaultState),
       ...JSON.parse(raw)
     };
+
   } catch {
     return structuredClone(defaultState);
   }
 }
 
+
 function saveState() {
-  localStorage.setItem(KEY, JSON.stringify(state));
+  localStorage.setItem(
+    KEY,
+    JSON.stringify(state)
+  );
 }
+
+
+async function initAuth() {
+
+  const {
+    data
+  } = await supabase.auth.getSession();
+
+  currentUser =
+    data?.session?.user || null;
+
+  authReady = true;
+
+  render();
+
+  supabase.auth.onAuthStateChange(
+    (_event, session) => {
+
+      currentUser =
+        session?.user || null;
+
+      authReady = true;
+
+      render();
+
+    }
+  );
+}
+
+
+async function handleAuth(event) {
+
+  event.preventDefault();
+
+  const email =
+    document
+      .querySelector('#auth-email')
+      .value
+      .trim();
+
+  const password =
+    document
+      .querySelector('#auth-password')
+      .value;
+
+  const errorBox =
+    document.querySelector('#auth-error');
+
+  const successBox =
+    document.querySelector('#auth-success');
+
+  const button =
+    document.querySelector('.auth-submit');
+
+  errorBox.classList.add('hidden');
+
+  successBox.classList.add('hidden');
+
+  button.disabled = true;
+
+  button.textContent =
+    authMode === 'login'
+      ? 'Iniciant sessió...'
+      : 'Creant compte...';
+
+  try {
+
+    if (authMode === 'login') {
+
+      const {
+        error
+      } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+      if (error) {
+        throw error;
+      }
+
+    } else {
+
+      const {
+        data,
+        error
+      } =
+        await supabase.auth.signUp({
+          email,
+          password
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data.session) {
+
+        successBox.textContent =
+          'Compte creat. Revisa el teu correu per confirmar l’adreça abans d’iniciar sessió.';
+
+        successBox.classList.remove(
+          'hidden'
+        );
+
+        button.disabled = false;
+
+        button.textContent =
+          'Crear compte';
+
+        return;
+      }
+    }
+
+  } catch (error) {
+
+    errorBox.textContent =
+      authErrorMessage(error);
+
+    errorBox.classList.remove(
+      'hidden'
+    );
+
+    button.disabled = false;
+
+    button.textContent =
+      authMode === 'login'
+        ? 'Iniciar sessió'
+        : 'Crear compte';
+  }
+}
+
+
+function authErrorMessage(error) {
+
+  const message =
+    String(error?.message || '');
+
+  const lower =
+    message.toLowerCase();
+
+  if (
+    lower.includes(
+      'invalid login credentials'
+    )
+  ) {
+    return 'El correu o la contrasenya no són correctes.';
+  }
+
+  if (
+    lower.includes(
+      'email not confirmed'
+    )
+  ) {
+    return 'Primer has de confirmar el teu correu electrònic.';
+  }
+
+  if (
+    lower.includes(
+      'user already registered'
+    )
+  ) {
+    return 'Aquest correu ja té un compte.';
+  }
+
+  if (
+    lower.includes(
+      'password should be at least'
+    )
+  ) {
+    return 'La contrasenya ha de tenir almenys 6 caràcters.';
+  }
+
+  return (
+    message ||
+    'No s’ha pogut completar l’operació.'
+  );
+}
+
+
+function toggleAuthMode() {
+
+  authMode =
+    authMode === 'login'
+      ? 'signup'
+      : 'login';
+
+  render();
+}
+
+
+async function logout() {
+
+  await supabase.auth.signOut();
+
+  currentUser = null;
+
+  state =
+    structuredClone(defaultState);
+
+  currentPage = 'dashboard';
+
+  render();
+}
+
+
+/* =========================================================
+   UTILITATS
+   ========================================================= */
 
 function uid(prefix = 'id') {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  return (
+    `${prefix}-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`
+  );
 }
 
+
 function esc(value = '') {
+
   return String(value)
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
@@ -56,62 +306,65 @@ function esc(value = '') {
     .replaceAll("'", '&#039;');
 }
 
-function chatMarkdown(text) {
-  let html = esc(text || '');
 
-  html = html
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h2>$1</h2>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^\s*[-•] (.+)$/gm, '<li>$1</li>')
-    .replace(/^\s*(\d+)\.\s+(.+)$/gm, '<li>$2</li>')
-    .replace(/\n/g, '<br>');
-
-  html = html.replace(
-    /(<li>.*?<\/li>)(?:<br>|$)/g,
-    '$1'
-  );
-
-  return html;
-}
 function todayISO() {
-  const d = new Date();
-  const offset = d.getTimezoneOffset();
 
-  return new Date(d.getTime() - offset * 60000)
+  const d = new Date();
+
+  const offset =
+    d.getTimezoneOffset();
+
+  return new Date(
+    d.getTime() -
+    offset * 60000
+  )
     .toISOString()
     .slice(0, 10);
 }
 
-function formatDate(value) {
-  if (!value) return '—';
 
-  const d = new Date(`${value}T12:00:00`);
+function formatDate(value) {
+
+  if (!value) {
+    return '—';
+  }
+
+  const d =
+    new Date(`${value}T12:00:00`);
 
   if (Number.isNaN(d.getTime())) {
     return value;
   }
 
-  return new Intl.DateTimeFormat('ca-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  }).format(d);
+  return new Intl.DateTimeFormat(
+    'ca-ES',
+    {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    }
+  ).format(d);
 }
 
-function daysUntil(value) {
-  if (!value) return 999;
 
-  const target = new Date(`${value}T23:59:59`);
+function daysUntil(value) {
+
+  if (!value) {
+    return 999;
+  }
+
+  const target =
+    new Date(`${value}T23:59:59`);
 
   return Math.ceil(
-    (target - Date.now()) / 86400000
+    (target - Date.now()) /
+    86400000
   );
 }
 
+
 function statusLabel(status) {
+
   return {
     pending: 'Pendent',
     inprogress: 'En curs',
@@ -119,7 +372,9 @@ function statusLabel(status) {
   }[status] || 'Pendent';
 }
 
+
 function difficultyLabel(value) {
+
   return {
     1: 'Baixa',
     2: 'Baixa',
@@ -129,8 +384,59 @@ function difficultyLabel(value) {
   }[Number(value)] || 'Mitjana';
 }
 
+
+function chatMarkdown(text) {
+
+  let html =
+    esc(text || '');
+
+  html =
+    html
+      .replace(
+        /^### (.+)$/gm,
+        '<h3>$1</h3>'
+      )
+      .replace(
+        /^## (.+)$/gm,
+        '<h2>$1</h2>'
+      )
+      .replace(
+        /^# (.+)$/gm,
+        '<h2>$1</h2>'
+      )
+      .replace(
+        /\*\*(.+?)\*\*/g,
+        '<strong>$1</strong>'
+      )
+      .replace(
+        /\*(.+?)\*/g,
+        '<em>$1</em>'
+      )
+      .replace(
+        /^\s*[-•] (.+)$/gm,
+        '<li>$1</li>'
+      )
+      .replace(
+        /^\s*\d+\.\s+(.+)$/gm,
+        '<li>$1</li>'
+      )
+      .replace(
+        /\n/g,
+        '<br>'
+      );
+
+  return html;
+}
+
+
+/* =========================================================
+   ICONES
+   ========================================================= */
+
 function icon(name, size = 18) {
+
   const paths = {
+
     dashboard:
       '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
 
@@ -204,7 +510,181 @@ function icon(name, size = 18) {
   `;
 }
 
+
+/* =========================================================
+   LOGIN / REGISTRE
+   ========================================================= */
+
+function authView() {
+
+  return `
+    <div class="auth-screen">
+
+      <div class="auth-card">
+
+        <div class="auth-brand">
+
+          <div class="auth-mark">
+            ${icon('sparkles', 24)}
+          </div>
+
+          <div>
+            <strong>TRIA</strong>
+            <span>Fet per Freddy Figueroa</span>
+          </div>
+
+        </div>
+
+        <div class="auth-heading">
+
+          <p class="eyebrow">
+            Organització acadèmica
+          </p>
+
+          <h1>
+            ${
+              authMode === 'login'
+                ? 'Benvingut de nou'
+                : 'Crea el teu compte'
+            }
+          </h1>
+
+          <p>
+            ${
+              authMode === 'login'
+                ? 'Inicia sessió per continuar amb TRIA.'
+                : 'Crea un compte per començar a organitzar el teu estudi.'
+            }
+          </p>
+
+        </div>
+
+        <form
+          id="auth-form"
+          class="auth-form"
+        >
+
+          <label>
+
+            Correu electrònic
+
+            <input
+              id="auth-email"
+              type="email"
+              autocomplete="email"
+              placeholder="tu@exemple.com"
+              required
+            >
+
+          </label>
+
+          <label>
+
+            Contrasenya
+
+            <input
+              id="auth-password"
+              type="password"
+              autocomplete="${
+                authMode === 'login'
+                  ? 'current-password'
+                  : 'new-password'
+              }"
+              placeholder="••••••••"
+              minlength="6"
+              required
+            >
+
+          </label>
+
+          <div
+            id="auth-error"
+            class="auth-message hidden"
+          ></div>
+
+          <div
+            id="auth-success"
+            class="auth-message success hidden"
+          ></div>
+
+          <button
+            class="btn primary auth-submit"
+            type="submit"
+          >
+            ${
+              authMode === 'login'
+                ? 'Iniciar sessió'
+                : 'Crear compte'
+            }
+          </button>
+
+        </form>
+
+        <div class="auth-switch">
+
+          <span>
+            ${
+              authMode === 'login'
+                ? 'Encara no tens compte?'
+                : 'Ja tens un compte?'
+            }
+          </span>
+
+          <button
+            type="button"
+            class="text-btn"
+            data-action="toggle-auth"
+          >
+            ${
+              authMode === 'login'
+                ? 'Crear compte'
+                : 'Iniciar sessió'
+            }
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+function bindAuthEvents() {
+
+  const form =
+    document.querySelector(
+      '#auth-form'
+    );
+
+  if (form) {
+    form.addEventListener(
+      'submit',
+      handleAuth
+    );
+  }
+
+  const toggle =
+    document.querySelector(
+      '[data-action="toggle-auth"]'
+    );
+
+  if (toggle) {
+    toggle.addEventListener(
+      'click',
+      toggleAuthMode
+    );
+  }
+}
+
+
+/* =========================================================
+   NAVEGACIÓ
+   ========================================================= */
+
 function navItems() {
+
   return [
     ['dashboard', 'Tauler', 'dashboard'],
     ['tasks', 'Tasques', 'tasks'],
@@ -216,14 +696,25 @@ function navItems() {
   ];
 }
 
+
 function pageTitle() {
-  return (
-    navItems().find(item => item[0] === currentPage)?.[1] ||
-    'Tauler'
-  );
+
+  const item =
+    navItems().find(
+      item =>
+        item[0] === currentPage
+    );
+
+  return item?.[1] || 'Tauler';
 }
 
+
+/* =========================================================
+   LAYOUT
+   ========================================================= */
+
 function layout() {
+
   return `
     <div class="app-shell">
 
@@ -250,15 +741,21 @@ function layout() {
 
         <nav class="nav">
 
-          ${navItems().map(([id, label, ico]) => `
-            <button
-              class="nav-item ${currentPage === id ? 'active' : ''}"
-              data-page="${id}"
-            >
-              ${icon(ico)}
-              <span>${label}</span>
-            </button>
-          `).join('')}
+          ${navItems().map(
+            ([id, label, ico]) => `
+              <button
+                class="nav-item ${
+                  currentPage === id
+                    ? 'active'
+                    : ''
+                }"
+                data-page="${id}"
+              >
+                ${icon(ico)}
+                <span>${label}</span>
+              </button>
+            `
+          ).join('')}
 
         </nav>
 
@@ -275,6 +772,13 @@ function layout() {
 
           </div>
 
+          <button
+            class="logout-btn"
+            data-action="logout"
+          >
+            Tancar sessió
+          </button>
+
         </div>
 
       </aside>
@@ -284,8 +788,15 @@ function layout() {
         <header class="topbar">
 
           <div>
-            <p class="eyebrow">Organització acadèmica</p>
-            <h1>${pageTitle()}</h1>
+
+            <p class="eyebrow">
+              Organització acadèmica
+            </p>
+
+            <h1>
+              ${pageTitle()}
+            </h1>
+
           </div>
 
           <div class="top-actions">
@@ -332,7 +843,9 @@ function layout() {
   `;
 }
 
+
 function buildModalHtml() {
+
   return `
     <div
       id="modal"
@@ -344,13 +857,18 @@ function buildModalHtml() {
         <div class="modal-head">
 
           <div>
-            <p class="eyebrow" id="modal-eyebrow">
+
+            <p
+              class="eyebrow"
+              id="modal-eyebrow"
+            >
               TRIA
             </p>
 
             <h2 id="modal-title">
               Nova tasca
             </h2>
+
           </div>
 
           <button
@@ -363,7 +881,9 @@ function buildModalHtml() {
 
         </div>
 
-        <form id="modal-form"></form>
+        <form
+          id="modal-form"
+        ></form>
 
       </div>
 
@@ -371,7 +891,18 @@ function buildModalHtml() {
   `;
 }
 
-function statCard(label, value, note, ico) {
+
+/* =========================================================
+   COMPONENTS
+   ========================================================= */
+
+function statCard(
+  label,
+  value,
+  note,
+  ico
+) {
+
   return `
     <div class="stat-card">
 
@@ -393,8 +924,12 @@ function statCard(label, value, note, ico) {
   `;
 }
 
+
 function taskCard(task) {
-  const days = daysUntil(task.dueDate);
+
+  const days =
+    daysUntil(task.dueDate);
+
   const urgent =
     task.status !== 'completed' &&
     days <= 2;
@@ -405,7 +940,11 @@ function taskCard(task) {
       <div class="task-main">
 
         <div
-          class="task-check ${task.status === 'completed' ? 'done' : ''}"
+          class="task-check ${
+            task.status === 'completed'
+              ? 'done'
+              : ''
+          }"
           data-action="toggle-task"
           data-id="${task.id}"
         >
@@ -420,16 +959,24 @@ function taskCard(task) {
 
           <div class="task-title-row">
 
-            <h3>${esc(task.title)}</h3>
+            <h3>
+              ${esc(task.title)}
+            </h3>
 
             <span class="badge">
-              ${esc(task.subject || 'General')}
+              ${esc(
+                task.subject ||
+                'General'
+              )}
             </span>
 
           </div>
 
           <p>
-            ${esc(task.description || 'Sense descripció')}
+            ${esc(
+              task.description ||
+              'Sense descripció'
+            )}
           </p>
 
           <div class="task-meta">
@@ -441,17 +988,24 @@ function taskCard(task) {
 
             <span>
               ${icon('clock', 14)}
-              ${Number(task.minutes || 30)} min
+              ${Number(task.minutes || 30)}
+              min
             </span>
 
             <span>
               Dificultat:
-              ${difficultyLabel(task.difficulty)}
+              ${difficultyLabel(
+                task.difficulty
+              )}
             </span>
 
             ${
               urgent
-                ? '<span class="danger-text">Urgent</span>'
+                ? `
+                  <span class="danger-text">
+                    Urgent
+                  </span>
+                `
                 : ''
             }
 
@@ -463,7 +1017,11 @@ function taskCard(task) {
 
       <div class="task-actions">
 
-        <span class="status ${task.status}">
+        <span
+          class="status ${
+            task.status
+          }"
+        >
           ${statusLabel(task.status)}
         </span>
 
@@ -490,7 +1048,14 @@ function taskCard(task) {
     </article>
   `;
 }
+
+
+/* =========================================================
+   CITES DEL PROFESSORAT
+   ========================================================= */
+
 const teacherQuotes = [
+
   "En l'àmbit estrictament acadèmic, no s'hauria d'utilitzar per adquirir coneixements, hàbits, esperit crític, etc., només s'hauria d'utilitzar en àmbits on hi hagi un adult que indiqui el bon i mal ús d'aquesta eina.",
 
   "Com a docent, crec que l'alumne ha d'utilitzar la IA per ajudar-se a entendre i practicar, no perquè li faci la feina. Primer ha d'intentar resoldre la tasca pel seu compte i, després, fer-la servir per demanar explicacions o pistes, generar exercicis i revisar el que ha fet, no per obtenir la resposta feta. També ha de contrastar sempre la informació, perquè la IA s'equivoca, i ser transparent sobre com l'ha utilitzada. En definitiva, la IA ajuda a aprendre quan et fa més capaç; si en depens per fer allò que hauries de saber fer sol, t'està perjudicant.",
@@ -508,61 +1073,89 @@ const teacherQuotes = [
   "Per poder extreure informació de diferents formats de continguts i poder obtenir un resum endreçat on estigui tot connectat.",
 
   "Haurien d'aprendre les seves limitacions i contraindicacions i no haurien de recórrer a la IA com a primera opció."
+
 ];
 
 const teacherQuote =
   teacherQuotes[
-    Math.floor(Math.random() * teacherQuotes.length)
+    Math.floor(
+      Math.random() *
+      teacherQuotes.length
+    )
   ];
+
+
+/* =========================================================
+   TAULER
+   ========================================================= */
+
 function dashboardView() {
+
   const pending =
     state.tasks.filter(
-      t => t.status !== 'completed'
+      t =>
+        t.status !==
+        'completed'
     );
 
   const completed =
     state.tasks.filter(
-      t => t.status === 'completed'
+      t =>
+        t.status ===
+        'completed'
     );
 
   const urgent =
     pending
       .filter(
-        t => daysUntil(t.dueDate) <= 2
+        t =>
+          daysUntil(
+            t.dueDate
+          ) <= 2
       )
       .sort(
         (a, b) =>
-          a.dueDate.localeCompare(b.dueDate)
+          a.dueDate.localeCompare(
+            b.dueDate
+          )
       );
 
   const upcomingExams =
     [...state.exams]
       .sort(
         (a, b) =>
-          a.date.localeCompare(b.date)
+          a.date.localeCompare(
+            b.date
+          )
       )
       .slice(0, 3);
 
   const totalMinutes =
     state.tasks.reduce(
       (sum, t) =>
-        sum + Number(t.minutes || 0),
+        sum +
+        Number(
+          t.minutes || 0
+        ),
       0
     );
 
   const completedMinutes =
     completed.reduce(
       (sum, t) =>
-        sum + Number(t.minutes || 0),
+        sum +
+        Number(
+          t.minutes || 0
+        ),
       0
     );
 
   const percent =
     state.tasks.length
       ? Math.round(
-          (completed.length /
-            state.tasks.length) *
-            100
+          completed.length /
+          state.tasks.length *
+          100
         )
       : 0;
 
@@ -581,23 +1174,23 @@ function dashboardView() {
             Organitza el teu estudi amb TRIA.
           </h2>
 
-         <p>
-  Consulta les tasques, prepara els exàmens
-  i deixa que la IA t'ajudi a ordenar
-  les prioritats.
-</p>
+          <p>
+            Consulta les tasques, prepara els
+            exàmens i deixa que la IA t'ajudi
+            a ordenar les prioritats.
+          </p>
 
-<div class="teacher-quote">
+          <div class="teacher-quote">
 
-  <div class="teacher-quote-label">
-    ✦ Veu del professorat sobre l'IA
-  </div>
+            <div class="teacher-quote-label">
+              ✦ Veu del professorat sobre l'IA
+            </div>
 
-  <blockquote>
-    “${esc(teacherQuote)}”
-  </blockquote>
+            <blockquote>
+              “${esc(teacherQuote)}”
+            </blockquote>
 
-</div>
+          </div>
 
         </div>
 
@@ -676,11 +1269,13 @@ function dashboardView() {
             ${
               (
                 urgent.length
-                  ? urgent.slice(0, 4)
-                  : pending.slice(0, 4)
+                  ? urgent
+                  : pending
               )
+                .slice(0, 4)
                 .map(taskCard)
                 .join('') ||
+
               `
                 <div class="empty">
                   No tens tasques pendents.
@@ -722,57 +1317,62 @@ function dashboardView() {
           <div class="exam-list">
 
             ${
-              upcomingExams.map(exam => `
-                <div class="exam-row">
+              upcomingExams.map(
+                exam => `
+                  <div class="exam-row">
 
-                  <div class="date-box">
+                    <div class="date-box">
 
-                    <strong>
-                      ${
-                        new Date(
-                          `${exam.date}T12:00:00`
-                        ).getDate()
-                      }
-                    </strong>
-
-                    <span>
-                      ${
-                        new Intl.DateTimeFormat(
-                          'ca-ES',
-                          { month: 'short' }
-                        ).format(
+                      <strong>
+                        ${
                           new Date(
                             `${exam.date}T12:00:00`
+                          ).getDate()
+                        }
+                      </strong>
+
+                      <span>
+                        ${
+                          new Intl.DateTimeFormat(
+                            'ca-ES',
+                            {
+                              month: 'short'
+                            }
+                          ).format(
+                            new Date(
+                              `${exam.date}T12:00:00`
+                            )
                           )
-                        )
-                      }
-                    </span>
+                        }
+                      </span>
 
-                  </div>
+                    </div>
 
-                  <div>
+                    <div>
 
-                    <strong>
-                      ${esc(exam.subject)}
-                    </strong>
+                      <strong>
+                        ${esc(exam.subject)}
+                      </strong>
 
-                    <span>
-                      ${
-                        esc(
+                      <span>
+                        ${esc(
                           exam.syllabus ||
                           'Sense temari'
-                        )
-                      }
+                        )}
+                      </span>
+
+                    </div>
+
+                    <span class="badge">
+                      ${difficultyLabel(
+                        exam.difficulty
+                      )}
                     </span>
 
                   </div>
+                `
+              ).join('') ||
 
-                  <span class="badge">
-                    ${difficultyLabel(exam.difficulty)}
-                  </span>
-
-                </div>
-              `).join('') ||
               `
                 <div class="empty">
                   No hi ha exàmens registrats.
@@ -817,12 +1417,10 @@ function dashboardView() {
         </div>
 
         <p class="plan-summary">
-          ${
-            esc(
-              state.plan?.summary ||
-              'Afegeix tasques i exàmens i prem «Recalcular amb IA» per generar una proposta.'
-            )
-          }
+          ${esc(
+            state.plan?.summary ||
+            'Afegeix tasques i exàmens i prem «Recalcular amb IA» per generar una proposta.'
+          )}
         </p>
 
       </section>
@@ -831,11 +1429,19 @@ function dashboardView() {
   `;
 }
 
+
+/* =========================================================
+   TASQUES
+   ========================================================= */
+
 function tasksView() {
+
   const tasks =
     [...state.tasks].sort(
       (a, b) =>
-        a.dueDate.localeCompare(b.dueDate)
+        a.dueDate.localeCompare(
+          b.dueDate
+        )
     );
 
   return `
@@ -860,7 +1466,10 @@ function tasksView() {
       <div class="task-list">
 
         ${
-          tasks.map(taskCard).join('') ||
+          tasks
+            .map(taskCard)
+            .join('') ||
+
           `
             <div class="empty large">
               Encara no tens tasques.
@@ -875,11 +1484,20 @@ function tasksView() {
     </div>
   `;
 }
+
+
+/* =========================================================
+   EXÀMENS
+   ========================================================= */
+
 function examsView() {
+
   const exams =
     [...state.exams].sort(
       (a, b) =>
-        a.date.localeCompare(b.date)
+        a.date.localeCompare(
+          b.date
+        )
     );
 
   return `
@@ -899,86 +1517,84 @@ function examsView() {
 
         </div>
 
-        <button
-          class="btn primary"
-          data-action="new-exam"
-        >
-          ${icon('plus', 17)}
-          Nou examen
-        </button>
-
       </div>
 
       <div class="exam-grid">
 
         ${
-          exams.map(exam => `
-            <article class="exam-card">
+          exams.map(
+            exam => `
+              <article class="exam-card">
 
-              <div class="exam-card-top">
+                <div class="exam-card-top">
 
-                <span class="badge">
+                  <span class="badge">
+                    ${esc(exam.subject)}
+                  </span>
+
+                  <span class="status pending">
+                    ${formatDate(exam.date)}
+                  </span>
+
+                </div>
+
+                <h3>
                   ${esc(exam.subject)}
-                </span>
+                </h3>
 
-                <span class="status pending">
-                  ${formatDate(exam.date)}
-                </span>
-
-              </div>
-
-              <h3>
-                ${esc(exam.subject)}
-              </h3>
-
-              <p>
-                ${
-                  esc(
+                <p>
+                  ${esc(
                     exam.syllabus ||
                     'Sense temari definit.'
-                  )
-                }
-              </p>
+                  )}
+                </p>
 
-              <div class="exam-details">
+                <div class="exam-details">
 
-                <span>
-                  Dificultat:
-                  ${difficultyLabel(exam.difficulty)}
-                </span>
+                  <span>
+                    Dificultat:
+                    ${difficultyLabel(
+                      exam.difficulty
+                    )}
+                  </span>
 
-                <span>
-                  Temps disponible:
-                  ${Number(exam.availableMinutes || 0)}
-                  min
-                </span>
+                  <span>
+                    Temps disponible:
+                    ${Number(
+                      exam.availableMinutes ||
+                      0
+                    )}
+                    min
+                  </span>
 
-              </div>
+                </div>
 
-              <div class="card-actions">
+                <div class="card-actions">
 
-                <button
-                  class="btn secondary"
-                  data-action="edit-exam"
-                  data-id="${exam.id}"
-                >
-                  ${icon('edit', 15)}
-                  Editar
-                </button>
+                  <button
+                    class="btn secondary"
+                    data-action="edit-exam"
+                    data-id="${exam.id}"
+                  >
+                    ${icon('edit', 15)}
+                    Editar
+                  </button>
 
-                <button
-                  class="btn ghost danger-btn"
-                  data-action="delete-exam"
-                  data-id="${exam.id}"
-                >
-                  ${icon('trash', 15)}
-                  Eliminar
-                </button>
+                  <button
+                    class="btn ghost danger-btn"
+                    data-action="delete-exam"
+                    data-id="${exam.id}"
+                  >
+                    ${icon('trash', 15)}
+                    Eliminar
+                  </button>
 
-              </div>
+                </div>
 
-            </article>
-          `).join('') ||
+              </article>
+            `
+          ).join('') ||
+
           `
             <div class="empty large">
               No hi ha exàmens registrats.
@@ -992,16 +1608,33 @@ function examsView() {
   `;
 }
 
+
+/* =========================================================
+   PLANIFICADOR
+   ========================================================= */
+
 function plannerView() {
+
   const days = [];
 
-  const start = new Date();
+  const start =
+    new Date();
 
-  start.setHours(12, 0, 0, 0);
+  start.setHours(
+    12,
+    0,
+    0,
+    0
+  );
 
-  for (let i = 0; i < 7; i++) {
+  for (
+    let i = 0;
+    i < 7;
+    i++
+  ) {
 
-    const d = new Date(start);
+    const d =
+      new Date(start);
 
     d.setDate(
       start.getDate() + i
@@ -1010,17 +1643,21 @@ function plannerView() {
     const iso =
       new Date(
         d.getTime() -
-        d.getTimezoneOffset() * 60000
+        d.getTimezoneOffset() *
+        60000
       )
         .toISOString()
         .slice(0, 10);
 
     days.push({
       date: iso,
-      label: new Intl.DateTimeFormat(
-        'ca-ES',
-        { weekday: 'short' }
-      ).format(d),
+      label:
+        new Intl.DateTimeFormat(
+          'ca-ES',
+          {
+            weekday: 'short'
+          }
+        ).format(d),
       day: d.getDate()
     });
   }
@@ -1055,138 +1692,186 @@ function plannerView() {
       <div class="planner">
 
         ${
-          days.map(day => {
+          days.map(
+            day => {
 
-            const dayTasks =
-              state.tasks.filter(
-                t =>
-                  t.dueDate === day.date &&
-                  t.status !== 'completed'
-              );
+              const dayTasks =
+                state.tasks.filter(
+                  task =>
+                    task.dueDate ===
+                      day.date &&
+                    task.status !==
+                      'completed'
+                );
 
-            const sessions =
-              state.plan?.sessions?.filter(
-                s => {
+              const sessions =
+                state.plan?.sessions
+                  ?.filter(
+                    session => {
 
-                  const base = new Date();
+                      const base =
+                        new Date();
 
-                  base.setHours(
-                    12,
-                    0,
-                    0,
-                    0
-                  );
+                      base.setHours(
+                        12,
+                        0,
+                        0,
+                        0
+                      );
 
-                  base.setDate(
-                    base.getDate() +
-                    Number(
-                      s.dayOffset || 0
-                    )
-                  );
+                      base.setDate(
+                        base.getDate() +
+                        Number(
+                          session.dayOffset ||
+                          0
+                        )
+                      );
 
-                  const iso =
-                    new Date(
-                      base.getTime() -
-                      base.getTimezoneOffset() *
-                        60000
-                    )
-                      .toISOString()
-                      .slice(0, 10);
+                      const iso =
+                        new Date(
+                          base.getTime() -
+                          base.getTimezoneOffset() *
+                          60000
+                        )
+                          .toISOString()
+                          .slice(0, 10);
 
-                  return iso === day.date;
-                }
-              ) || [];
+                      return (
+                        iso ===
+                        day.date
+                      );
+                    }
+                  ) ||
+                [];
 
-            return `
-              <div class="day-column">
+              return `
+                <div class="day-column">
 
-                <div class="day-head">
+                  <div class="day-head">
 
-                  <span>
-                    ${day.label}
-                  </span>
+                    <span>
+                      ${day.label}
+                    </span>
 
-                  <strong>
-                    ${day.day}
-                  </strong>
+                    <strong>
+                      ${day.day}
+                    </strong>
 
-                </div>
+                  </div>
 
-                <div class="day-body">
+                  <div class="day-body">
 
-                  ${
-                    dayTasks.map(t => `
-                      <div class="calendar-item task-item">
+                    ${
+                      dayTasks
+                        .map(
+                          task => `
+                            <div
+                              class="calendar-item task-item"
+                            >
 
-                        <strong>
-                          ${esc(t.title)}
-                        </strong>
+                              <strong>
+                                ${esc(
+                                  task.title
+                                )}
+                              </strong>
 
-                        <small>
-                          ${esc(t.subject)}
-                        </small>
+                              <small>
+                                ${esc(
+                                  task.subject
+                                )}
+                              </small>
 
-                      </div>
-                    `).join('')
-                  }
+                            </div>
+                          `
+                        )
+                        .join('')
+                    }
 
-                  ${
-                    sessions.map(s => {
+                    ${
+                      sessions
+                        .map(
+                          session => {
 
-const task =
-  s.targetType === 'task'
-    ? state.tasks.find(
-        t => String(t.id) === String(s.targetId)
-      )
-    : null;
+                            const task =
+                              session.targetType ===
+                              'task'
+                                ? state.tasks.find(
+                                    t =>
+                                      String(t.id) ===
+                                      String(
+                                        session.targetId
+                                      )
+                                  )
+                                : null;
 
-const exam =
-  s.targetType === 'exam'
-    ? state.exams.find(
-        e => String(e.id) === String(s.targetId)
-      )
-    : null;
+                            const exam =
+                              session.targetType ===
+                              'exam'
+                                ? state.exams.find(
+                                    e =>
+                                      String(e.id) ===
+                                      String(
+                                        session.targetId
+                                      )
+                                  )
+                                : null;
 
-                      return `
-                        <div class="calendar-item ai-item">
+                            const title =
+                              task?.title
+                                ? `Estudi: ${task.title}`
+                                : exam?.subject
+                                  ? `Estudi: ${exam.subject}`
+                                  : 'Sessió d’estudi';
 
-                          <span>
-                            ${icon('sparkles', 13)}
+                            return `
+                              <div
+                                class="calendar-item ai-item"
+                              >
+
+                                <span>
+                                  ${icon(
+                                    'sparkles',
+                                    13
+                                  )}
+                                </span>
+
+                                <strong>
+                                  ${esc(title)}
+                                </strong>
+
+                                <small>
+                                  ${
+                                    Number(
+                                      session.minutes ||
+                                      0
+                                    )
+                                  } min
+                                </small>
+
+                              </div>
+                            `;
+                          }
+                        )
+                        .join('')
+                    }
+
+                    ${
+                      !dayTasks.length &&
+                      !sessions.length
+                        ? `
+                          <span class="day-empty">
+                            Lliure
                           </span>
+                        `
+                        : ''
+                    }
 
-                          <strong>
-${esc(
-  task?.title
-    ? `Estudi: ${task.title}`
-    : exam?.subject
-      ? `Estudi: ${exam.subject}`
-      : 'Sessió'
-)}
-</strong>
-
-                          <small>
-                            ${s.minutes} min
-                          </small>
-
-                        </div>
-                      `;
-
-                    }).join('')
-                  }
-
-                  ${
-                    !dayTasks.length &&
-                    !sessions.length
-                      ? '<span class="day-empty">Lliure</span>'
-                      : ''
-                  }
+                  </div>
 
                 </div>
-
-              </div>
-            `;
-
-          }).join('')
+              `;
+            }
+          ).join('')
         }
 
       </div>
@@ -1195,7 +1880,13 @@ ${esc(
   `;
 }
 
+
+/* =========================================================
+   XAT IA
+   ========================================================= */
+
 function chatView() {
+
   return `
     <div class="page chat-page">
 
@@ -1218,8 +1909,9 @@ function chatView() {
             </h2>
 
             <span>
-              Pot consultar les teves tasques i
-              exàmens per ajudar-te a organitzar-te.
+              Pot consultar les teves tasques
+              i exàmens per ajudar-te
+              a organitzar-te.
             </span>
 
           </div>
@@ -1234,19 +1926,34 @@ function chatView() {
           ${
             state.chat.length
 
-              ? state.chat.map(m => `
-                  <div class="message ${m.role}">
-                    <div class="message-bubble">
-                ${chatMarkdown(m.text)}
-                    </div>
-                  </div>
-                `).join('')
+              ? state.chat
+                  .map(
+                    message => `
+                      <div
+                        class="message ${message.role}"
+                      >
+
+                        <div
+                          class="message-bubble"
+                        >
+                          ${chatMarkdown(
+                            message.text
+                          )}
+                        </div>
+
+                      </div>
+                    `
+                  )
+                  .join('')
 
               : `
                 <div class="chat-empty">
 
                   <div class="assistant-avatar">
-                    ${icon('sparkles', 22)}
+                    ${icon(
+                      'sparkles',
+                      22
+                    )}
                   </div>
 
                   <h3>
@@ -1254,9 +1961,10 @@ function chatView() {
                   </h3>
 
                   <p>
-                    Pregunta'm com prioritzar les
-                    tasques, quan estudiar o com
-                    preparar els pròxims exàmens.
+                    Pregunta'm com prioritzar
+                    les tasques, quan estudiar
+                    o com preparar els pròxims
+                    exàmens.
                   </p>
 
                 </div>
@@ -1293,37 +2001,55 @@ function chatView() {
   `;
 }
 
+
+/* =========================================================
+   PROGRÉS
+   ========================================================= */
+
 function progressView() {
+
   const total =
     state.tasks.length;
 
   const done =
     state.tasks.filter(
-      t => t.status === 'completed'
+      task =>
+        task.status ===
+        'completed'
     ).length;
 
   const planned =
     state.tasks.reduce(
-      (sum, t) =>
-        sum + Number(t.minutes || 0),
+      (sum, task) =>
+        sum +
+        Number(
+          task.minutes || 0
+        ),
       0
     );
 
   const completed =
     state.tasks
       .filter(
-        t => t.status === 'completed'
+        task =>
+          task.status ===
+          'completed'
       )
       .reduce(
-        (sum, t) =>
-          sum + Number(t.minutes || 0),
+        (sum, task) =>
+          sum +
+          Number(
+            task.minutes || 0
+          ),
         0
       );
 
   const percent =
     total
       ? Math.round(
-          (done / total) * 100
+          done /
+          total *
+          100
         )
       : 0;
 
@@ -1406,8 +2132,8 @@ function progressView() {
         </div>
 
         <p class="muted">
-          ${percent}% de les tasques registrades
-          estan completades.
+          ${percent}% de les tasques
+          registrades estan completades.
         </p>
 
       </section>
@@ -1416,7 +2142,17 @@ function progressView() {
   `;
 }
 
+
+/* =========================================================
+   AVALUACIÓ
+   ========================================================= */
+
 function settingsView() {
+
+  const email =
+    currentUser?.email ||
+    'Usuari';
+
   return `
     <div class="page">
 
@@ -1425,7 +2161,7 @@ function settingsView() {
         <div>
 
           <p class="eyebrow">
-            Projecte TdR
+            Compte
           </p>
 
           <h2>
@@ -1445,27 +2181,33 @@ function settingsView() {
             <div>
 
               <p class="eyebrow">
-                Registre
+                Sessió actual
               </p>
 
               <h2>
-                Dades de l'aplicació
+                Compte
               </h2>
 
             </div>
 
           </div>
 
-          <p>
-            TRIA guarda localment les tasques,
-            els exàmens, els plans generats
-            i les converses d'estudi.
-          </p>
+          <div class="setting-row">
+
+            <span>
+              Correu electrònic
+            </span>
+
+            <strong>
+              ${esc(email)}
+            </strong>
+
+          </div>
 
           <div class="setting-row">
 
             <span>
-              Tasques registrades
+              Tasques
             </span>
 
             <strong>
@@ -1477,7 +2219,7 @@ function settingsView() {
           <div class="setting-row">
 
             <span>
-              Exàmens registrats
+              Exàmens
             </span>
 
             <strong>
@@ -1507,7 +2249,7 @@ function settingsView() {
             <div>
 
               <p class="eyebrow">
-                Manteniment
+                Dades
               </p>
 
               <h2>
@@ -1536,6 +2278,13 @@ function settingsView() {
               Restablir dades
             </button>
 
+            <button
+              class="btn ghost"
+              data-action="logout"
+            >
+              Tancar sessió
+            </button>
+
           </div>
 
         </section>
@@ -1546,25 +2295,100 @@ function settingsView() {
   `;
 }
 
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+
 function render() {
+
   const root =
-    document.querySelector('#root');
+    document.querySelector(
+      '#root'
+    );
 
-  if (!root) return;
+  if (!root) {
+    return;
+  }
 
-  root.innerHTML = layout();
+  if (!authReady) {
+
+    root.innerHTML = `
+      <div class="auth-screen">
+
+        <div class="auth-card">
+
+          <div class="auth-brand">
+
+            <div class="auth-mark">
+              ${icon(
+                'sparkles',
+                24
+              )}
+            </div>
+
+            <div>
+              <strong>TRIA</strong>
+              <span>
+                Fet per Freddy Figueroa
+              </span>
+            </div>
+
+          </div>
+
+          <p class="muted">
+            Carregant...
+          </p>
+
+        </div>
+
+      </div>
+    `;
+
+    return;
+  }
+
+  if (!currentUser) {
+
+    root.innerHTML =
+      authView();
+
+    bindAuthEvents();
+
+    return;
+  }
+
+  root.innerHTML =
+    layout();
 
   const content =
-    document.querySelector('#content');
+    document.querySelector(
+      '#content'
+    );
 
   const views = {
-    dashboard: dashboardView,
-    tasks: tasksView,
-    exams: examsView,
-    planner: plannerView,
-    chat: chatView,
-    progress: progressView,
-    settings: settingsView
+
+    dashboard:
+      dashboardView,
+
+    tasks:
+      tasksView,
+
+    exams:
+      examsView,
+
+    planner:
+      plannerView,
+
+    chat:
+      chatView,
+
+    progress:
+      progressView,
+
+    settings:
+      settingsView
+
   };
 
   content.innerHTML =
@@ -1589,10 +2413,17 @@ function render() {
   }
 }
 
+
+/* =========================================================
+   EVENTS
+   ========================================================= */
+
 function bindEvents() {
 
   document
-    .querySelectorAll('[data-page]')
+    .querySelectorAll(
+      '[data-page]'
+    )
     .forEach(button => {
 
       button.addEventListener(
@@ -1610,7 +2441,9 @@ function bindEvents() {
     });
 
   document
-    .querySelectorAll('[data-action]')
+    .querySelectorAll(
+      '[data-action]'
+    )
     .forEach(button => {
 
       button.addEventListener(
@@ -1635,6 +2468,7 @@ function bindEvents() {
   }
 }
 
+
 async function handleAction(event) {
 
   const action =
@@ -1643,54 +2477,121 @@ async function handleAction(event) {
   const id =
     event.currentTarget.dataset.id;
 
-  if (action === 'new-task') {
+  if (
+    action ===
+    'toggle-auth'
+  ) {
+    toggleAuthMode();
+    return;
+  }
+
+  if (
+    action ===
+    'logout'
+  ) {
+    await logout();
+    return;
+  }
+
+  if (
+    action ===
+    'new-task'
+  ) {
     openTaskModal();
+    return;
   }
 
-  if (action === 'edit-task') {
+  if (
+    action ===
+    'edit-task'
+  ) {
     openTaskModal(id);
+    return;
   }
 
-  if (action === 'delete-task') {
+  if (
+    action ===
+    'delete-task'
+  ) {
     deleteTask(id);
+    return;
   }
 
-  if (action === 'toggle-task') {
+  if (
+    action ===
+    'toggle-task'
+  ) {
     toggleTask(id);
+    return;
   }
 
-  if (action === 'new-exam') {
+  if (
+    action ===
+    'new-exam'
+  ) {
     openExamModal();
+    return;
   }
 
-  if (action === 'edit-exam') {
+  if (
+    action ===
+    'edit-exam'
+  ) {
     openExamModal(id);
+    return;
   }
 
-  if (action === 'delete-exam') {
+  if (
+    action ===
+    'delete-exam'
+  ) {
     deleteExam(id);
+    return;
   }
 
-  if (action === 'close-modal') {
+  if (
+    action ===
+    'close-modal'
+  ) {
     closeModal();
+    return;
   }
 
-  if (action === 'recalculate') {
+  if (
+    action ===
+    'recalculate'
+  ) {
     await generatePlan();
+    return;
   }
 
-  if (action === 'export') {
+  if (
+    action ===
+    'export'
+  ) {
     exportData();
+    return;
   }
 
-  if (action === 'reset') {
+  if (
+    action ===
+    'reset'
+  ) {
     resetData();
   }
 }
 
-function openTaskModal(id = null) {
+
+/* =========================================================
+   TASQUES · CRUD
+   ========================================================= */
+
+function openTaskModal(
+  id = null
+) {
 
   modalMode = 'task';
+
   editingId = id;
 
   const task =
@@ -1712,7 +2613,8 @@ function openTaskModal(id = null) {
 
   document.querySelector(
     '#modal-eyebrow'
-  ).textContent = 'TASQUES';
+  ).textContent =
+    'TASQUES';
 
   document.querySelector(
     '#modal-title'
@@ -1726,52 +2628,66 @@ function openTaskModal(id = null) {
     <div class="form-grid">
 
       <label>
+
         Títol
 
         <input
           name="title"
           required
-          value="${esc(task?.title || '')}"
+          value="${esc(
+            task?.title || ''
+          )}"
           placeholder="Ex. Preparar presentació"
         >
 
       </label>
 
       <label>
+
         Assignatura
 
         <input
           name="subject"
-          value="${esc(task?.subject || '')}"
+          value="${esc(
+            task?.subject || ''
+          )}"
           placeholder="Ex. Història"
         >
 
       </label>
 
       <label class="full">
+
         Descripció
 
         <textarea
           name="description"
           rows="3"
           placeholder="Què has de fer?"
-        >${esc(task?.description || '')}</textarea>
+        >${esc(
+          task?.description || ''
+        )}</textarea>
 
       </label>
 
       <label>
+
         Data límit
 
         <input
           name="dueDate"
           type="date"
           required
-          value="${task?.dueDate || todayISO()}"
+          value="${
+            task?.dueDate ||
+            todayISO()
+          }"
         >
 
       </label>
 
       <label>
+
         Temps estimat (min)
 
         <input
@@ -1779,15 +2695,20 @@ function openTaskModal(id = null) {
           type="number"
           min="5"
           step="5"
-          value="${Number(task?.minutes || 30)}"
+          value="${Number(
+            task?.minutes || 30
+          )}"
         >
 
       </label>
 
       <label>
+
         Dificultat
 
-        <select name="difficulty">
+        <select
+          name="difficulty"
+        >
 
           ${
             [1,2,3,4,5]
@@ -1797,13 +2718,15 @@ function openTaskModal(id = null) {
                     value="${n}"
                     ${
                       Number(
-                        task?.difficulty || 3
+                        task?.difficulty ||
+                        3
                       ) === n
                         ? 'selected'
                         : ''
                     }
                   >
-                    ${n} · ${difficultyLabel(n)}
+                    ${n} ·
+                    ${difficultyLabel(n)}
                   </option>
                 `
               )
@@ -1815,23 +2738,35 @@ function openTaskModal(id = null) {
       </label>
 
       <label>
+
         Estat
 
-        <select name="status">
+        <select
+          name="status"
+        >
 
           ${
-            ['pending','inprogress','completed']
+            [
+              'pending',
+              'inprogress',
+              'completed'
+            ]
               .map(
-                s => `
+                status => `
                   <option
-                    value="${s}"
+                    value="${status}"
                     ${
-                      task?.status === s
+                      (
+                        task?.status ||
+                        'pending'
+                      ) === status
                         ? 'selected'
                         : ''
                     }
                   >
-                    ${statusLabel(s)}
+                    ${statusLabel(
+                      status
+                    )}
                   </option>
                 `
               )
@@ -1872,7 +2807,10 @@ function openTaskModal(id = null) {
   );
 }
 
-function saveTaskFromForm(event) {
+
+function saveTaskFromForm(
+  event
+) {
 
   event.preventDefault();
 
@@ -1888,14 +2826,20 @@ function saveTaskFromForm(event) {
       uid('task'),
 
     title:
-      data.get('title').trim(),
+      String(
+        data.get('title') || ''
+      ).trim(),
 
     subject:
-      data.get('subject').trim() ||
+      String(
+        data.get('subject') || ''
+      ).trim() ||
       'General',
 
     description:
-      data.get('description').trim(),
+      String(
+        data.get('description') || ''
+      ).trim(),
 
     dueDate:
       data.get('dueDate'),
@@ -1913,17 +2857,16 @@ function saveTaskFromForm(event) {
     status:
       data.get('status') ||
       'pending'
-
   };
 
   if (editingId) {
 
     state.tasks =
       state.tasks.map(
-        t =>
-          t.id === editingId
+        task =>
+          task.id === editingId
             ? item
-            : t
+            : task
       );
 
   } else {
@@ -1933,9 +2876,12 @@ function saveTaskFromForm(event) {
   }
 
   saveState();
+
   closeModal();
+
   render();
 }
+
 
 function deleteTask(id) {
 
@@ -1949,39 +2895,55 @@ function deleteTask(id) {
 
   state.tasks =
     state.tasks.filter(
-      t => t.id !== id
+      task =>
+        task.id !== id
     );
 
   saveState();
+
   render();
 }
+
 
 function toggleTask(id) {
 
   state.tasks =
-    state.tasks.map(t => {
+    state.tasks.map(
+      task => {
 
-      if (t.id !== id) {
-        return t;
+        if (
+          task.id !== id
+        ) {
+          return task;
+        }
+
+        return {
+          ...task,
+          status:
+            task.status ===
+            'completed'
+              ? 'pending'
+              : 'completed'
+        };
       }
-
-      return {
-        ...t,
-        status:
-          t.status === 'completed'
-            ? 'pending'
-            : 'completed'
-      };
-
-    });
+    );
 
   saveState();
+
   render();
 }
 
-function openExamModal(id = null) {
+
+/* =========================================================
+   EXÀMENS · CRUD
+   ========================================================= */
+
+function openExamModal(
+  id = null
+) {
 
   modalMode = 'exam';
+
   editingId = id;
 
   const exam =
@@ -2003,7 +2965,8 @@ function openExamModal(id = null) {
 
   document.querySelector(
     '#modal-eyebrow'
-  ).textContent = 'EXÀMENS';
+  ).textContent =
+    'EXÀMENS';
 
   document.querySelector(
     '#modal-title'
@@ -2017,44 +2980,57 @@ function openExamModal(id = null) {
     <div class="form-grid">
 
       <label>
+
         Assignatura
 
         <input
           name="subject"
           required
-          value="${esc(exam?.subject || '')}"
+          value="${esc(
+            exam?.subject || ''
+          )}"
           placeholder="Ex. Matemàtiques"
         >
 
       </label>
 
       <label>
+
         Data
 
         <input
           name="date"
           type="date"
           required
-          value="${exam?.date || todayISO()}"
+          value="${
+            exam?.date ||
+            todayISO()
+          }"
         >
 
       </label>
 
       <label class="full">
+
         Temari
 
         <textarea
           name="syllabus"
           rows="3"
           placeholder="Temes que entren a l'examen"
-        >${esc(exam?.syllabus || '')}</textarea>
+        >${esc(
+          exam?.syllabus || ''
+        )}</textarea>
 
       </label>
 
       <label>
+
         Dificultat
 
-        <select name="difficulty">
+        <select
+          name="difficulty"
+        >
 
           ${
             [1,2,3,4,5]
@@ -2064,13 +3040,15 @@ function openExamModal(id = null) {
                     value="${n}"
                     ${
                       Number(
-                        exam?.difficulty || 3
+                        exam?.difficulty ||
+                        3
                       ) === n
                         ? 'selected'
                         : ''
                     }
                   >
-                    ${n} · ${difficultyLabel(n)}
+                    ${n} ·
+                    ${difficultyLabel(n)}
                   </option>
                 `
               )
@@ -2082,6 +3060,7 @@ function openExamModal(id = null) {
       </label>
 
       <label>
+
         Temps disponible (min)
 
         <input
@@ -2089,7 +3068,10 @@ function openExamModal(id = null) {
           type="number"
           min="0"
           step="15"
-          value="${Number(exam?.availableMinutes || 120)}"
+          value="${Number(
+            exam?.availableMinutes ||
+            120
+          )}"
         >
 
       </label>
@@ -2114,7 +3096,6 @@ function openExamModal(id = null) {
       </button>
 
     </div>
-
   `;
 
   form.onsubmit =
@@ -2125,7 +3106,10 @@ function openExamModal(id = null) {
   );
 }
 
-function saveExamFromForm(event) {
+
+function saveExamFromForm(
+  event
+) {
 
   event.preventDefault();
 
@@ -2141,13 +3125,19 @@ function saveExamFromForm(event) {
       uid('exam'),
 
     subject:
-      data.get('subject').trim(),
+      String(
+        data.get('subject') ||
+        ''
+      ).trim(),
 
     date:
       data.get('date'),
 
     syllabus:
-      data.get('syllabus').trim(),
+      String(
+        data.get('syllabus') ||
+        ''
+      ).trim(),
 
     difficulty:
       Number(
@@ -2167,10 +3157,10 @@ function saveExamFromForm(event) {
 
     state.exams =
       state.exams.map(
-        e =>
-          e.id === editingId
+        exam =>
+          exam.id === editingId
             ? item
-            : e
+            : exam
       );
 
   } else {
@@ -2180,9 +3170,12 @@ function saveExamFromForm(event) {
   }
 
   saveState();
+
   closeModal();
+
   render();
 }
+
 
 function deleteExam(id) {
 
@@ -2196,12 +3189,15 @@ function deleteExam(id) {
 
   state.exams =
     state.exams.filter(
-      e => e.id !== id
+      exam =>
+        exam.id !== id
     );
 
   saveState();
+
   render();
 }
+
 
 function closeModal() {
 
@@ -2211,14 +3207,22 @@ function closeModal() {
     );
 
   if (modal) {
+
     modal.classList.add(
       'hidden'
     );
+
   }
 
   modalMode = null;
+
   editingId = null;
 }
+
+
+/* =========================================================
+   IA · PLA D'ESTUDI
+   ========================================================= */
 
 async function generatePlan() {
 
@@ -2229,14 +3233,19 @@ async function generatePlan() {
       )
     ];
 
-  buttons.forEach(button => {
+  buttons.forEach(
+    button => {
 
-    button.disabled = true;
+      button.disabled = true;
 
-    button.innerHTML =
-      `${icon('refresh', 16)} Calculant...`;
+      button.innerHTML =
+        `${icon(
+          'refresh',
+          16
+        )} Calculant...`;
 
-  });
+    }
+  );
 
   try {
 
@@ -2255,6 +3264,7 @@ async function generatePlan() {
             JSON.stringify({
               tasks:
                 state.tasks,
+
               exams:
                 state.exams
             })
@@ -2273,33 +3283,60 @@ async function generatePlan() {
 
     }
 
-if (Array.isArray(data.sessions)) {
-  data.sessions = data.sessions.filter(session => {
     if (
-      session.targetType === 'task' &&
-      !state.tasks.some(
-        task => String(task.id) === String(session.targetId)
+      Array.isArray(
+        data.sessions
       )
     ) {
-      return false;
+
+      data.sessions =
+        data.sessions.filter(
+          session => {
+
+            if (
+              session.targetType ===
+                'task' &&
+              !state.tasks.some(
+                task =>
+                  String(task.id) ===
+                  String(
+                    session.targetId
+                  )
+              )
+            ) {
+              return false;
+            }
+
+            if (
+              session.targetType ===
+                'exam' &&
+              !state.exams.some(
+                exam =>
+                  String(exam.id) ===
+                  String(
+                    session.targetId
+                  )
+              )
+            ) {
+              return false;
+            }
+
+            return true;
+          }
+        );
+
     }
 
-    if (
-      session.targetType === 'exam' &&
-      !state.exams.some(
-        exam => String(exam.id) === String(session.targetId)
-      )
-    ) {
-      return false;
-    }
+    state.plan =
+      data;
 
-    return true;
-  });
-}
-state.plan = data;
-saveState();
-alert('Pla actualitzat correctament.');
-render();
+    saveState();
+
+    alert(
+      'Pla actualitzat correctament.'
+    );
+
+    render();
 
   } catch (error) {
 
@@ -2307,17 +3344,27 @@ render();
       `No s’ha pogut generar el pla: ${error.message}`
     );
 
-    buttons.forEach(button => {
+    buttons.forEach(
+      button => {
 
-      button.disabled = false;
+        button.disabled =
+          false;
 
-      button.innerHTML =
-        `${icon('sparkles', 17)} Recalcular amb IA`;
+        button.innerHTML =
+          `${icon(
+            'sparkles',
+            17
+          )} Recalcular amb IA`;
 
-    });
-
+      }
+    );
   }
 }
+
+
+/* =========================================================
+   IA · XAT
+   ========================================================= */
 
 async function sendChat(event) {
 
@@ -2331,7 +3378,9 @@ async function sendChat(event) {
   const message =
     input.value.trim();
 
-  if (!message) return;
+  if (!message) {
+    return;
+  }
 
   state.chat.push({
     role: 'user',
@@ -2341,6 +3390,7 @@ async function sendChat(event) {
   input.value = '';
 
   saveState();
+
   render();
 
   try {
@@ -2358,11 +3408,15 @@ async function sendChat(event) {
 
           body:
             JSON.stringify({
+
               message,
+
               tasks:
                 state.tasks,
+
               exams:
                 state.exams
+
             })
         }
       );
@@ -2380,25 +3434,39 @@ async function sendChat(event) {
     }
 
     state.chat.push({
-      role: 'assistant',
+
+      role:
+        'assistant',
+
       text:
         data.answer ||
         'No he rebut cap resposta.'
+
     });
 
   } catch (error) {
 
     state.chat.push({
-      role: 'assistant',
+
+      role:
+        'assistant',
+
       text:
         `No he pogut connectar amb la IA: ${error.message}`
+
     });
 
   }
 
   saveState();
+
   render();
 }
+
+
+/* =========================================================
+   EXPORTAR
+   ========================================================= */
 
 function exportData() {
 
@@ -2456,8 +3524,15 @@ function exportData() {
 
   a.click();
 
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(
+    url
+  );
 }
+
+
+/* =========================================================
+   RESTABLIR
+   ========================================================= */
 
 function resetData() {
 
@@ -2482,16 +3557,25 @@ function resetData() {
   render();
 }
 
+
+/* =========================================================
+   TECLAT / MODAL
+   ========================================================= */
+
 document.addEventListener(
   'keydown',
   event => {
 
-    if (event.key === 'Escape') {
+    if (
+      event.key ===
+      'Escape'
+    ) {
       closeModal();
     }
 
   }
 );
+
 
 document.addEventListener(
   'click',
@@ -2507,4 +3591,9 @@ document.addEventListener(
   }
 );
 
-render();
+
+/* =========================================================
+   INICI
+   ========================================================= */
+
+initAuth();
