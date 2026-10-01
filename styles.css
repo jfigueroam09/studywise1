@@ -3920,118 +3920,308 @@ select:focus {
    VIST DES DE L'AULA · PROFESSOR DISCRET
    ========================================================= */
 
+/* =========================================================
+   VIST DES DE L'AULA
+   ========================================================= */
+
 .teacher-note {
   position: relative;
 
-  padding: 22px 24px;
+  margin-top: 18px;
+  padding: 25px 28px;
 
-  border: 1px solid rgba(139, 124, 246, .24);
-  border-radius: 15px;
+  border: 1px solid rgba(139, 124, 246, .22);
+  border-radius: 16px;
 
   background:
     radial-gradient(
-      circle at 0% 50%,
-      rgba(139, 124, 246, .08),
-      transparent 38%
+      circle at 4% 50%,
+      rgba(139, 124, 246, .075),
+      transparent 34%
     ),
     #101216;
 
   overflow: hidden;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025);
 }
 
 
-/* subtil llum al voltant */
 .teacher-note::before {
   content: "";
 
   position: absolute;
 
-  inset: 0;
+  width: 180px;
+  height: 180px;
 
-  pointer-events: none;
+  left: -95px;
+  top: 50%;
+
+  transform: translateY(-50%);
+
+  border-radius: 50%;
 
   background:
-    linear-gradient(
-      110deg,
-      rgba(139, 124, 246, .06),
-      transparent 35%,
-      transparent 70%,
-      rgba(255,255,255,.018)
-    );
+    rgba(139, 124, 246, .09);
+
+  filter: blur(55px);
+
+  pointer-events: none;
 }
 
 
-/* etiqueta */
-.teacher-note .eyebrow {
+.teacher-note-header {
   position: relative;
+  z-index: 1;
 
-  color: #858994;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 
-  font-size: 10px;
-
-  letter-spacing: .12em;
+  margin-bottom: 20px;
 }
 
 
-/* frase del professor */
-.teacher-note blockquote {
+.teacher-note-header h3 {
+  margin: 6px 0 0;
+
+  color: #e2e3e6;
+
+  font-size: 16px;
+  line-height: 1.3;
+
+  font-weight: 600;
+}
+
+
+.teacher-note-header .eyebrow {
+  color: #777b84;
+
+  font-size: 9px;
+
+  letter-spacing: .13em;
+}
+
+
+.teacher-note-icon {
+  display: none;
+}
+
+
+/* =========================================================
+   CITA
+   ========================================================= */
+
+.teacher-quote-wrap {
+  position: relative;
+  z-index: 1;
+
+  display: grid;
+
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+
+  align-items: center;
+
+  gap: 14px;
+
+  min-height: 145px;
+}
+
+
+.teacher-quote-wrap blockquote {
   position: relative;
 
-  max-width: 850px;
+  margin: 0 auto;
 
-  margin:
-    9px
-    0
-    0;
+  max-width: 900px;
 
-  color: #c3c5ca;
+  padding:
+    4px 18px;
+
+  color: #bfc2c8;
 
   font-size: 15px;
 
-  line-height: 1.65;
+  line-height: 1.75;
+
+  font-weight: 400;
 
   font-style: italic;
 
-  font-weight: 450;
+  text-align: center;
 }
 
 
-/* nom / identificació del professor */
-.teacher-note .teacher-name {
-  position: relative;
+.teacher-quote-text {
+  display: inline;
+}
 
-  display: block;
 
-  margin-top: 11px;
+/* comillas */
+.quote-mark {
+  color:
+    rgba(139, 124, 246, .65);
 
-  color: #777b84;
+  font-size: 30px;
 
-  font-size: 10px;
+  line-height: 0;
+
+  font-style: normal;
 
   font-weight: 600;
 
-  letter-spacing: .02em;
+  vertical-align: -7px;
 }
 
 
-/* si el nom està dins d'un span */
-.teacher-note span {
-  color: #777b84;
+.quote-mark.closing {
+  margin-left: 3px;
 }
 
 
-/* petit detall lluminós */
-.teacher-note blockquote::before {
-  content: "“";
+/* =========================================================
+   FLECHAS
+   ========================================================= */
 
-  position: absolute;
+.teacher-arrow {
+  width: 32px;
+  height: 32px;
 
-  left: -16px;
-  top: -8px;
+  display: grid;
+  place-items: center;
 
-  color: rgba(139, 124, 246, .55);
+  padding: 0;
 
-  font-size: 28px;
+  border:
+    1px solid #292d35;
 
-  line-height: 1;
+  border-radius: 9px;
+
+  background:
+    rgba(255,255,255,.018);
+
+  color: #777c86;
+
+  transition:
+    .16s ease;
+}
+
+
+.teacher-arrow:hover {
+  border-color:
+    rgba(139,124,246,.38);
+
+  background:
+    rgba(139,124,246,.08);
+
+  color:
+    #a79cff;
+}
+
+
+/* =========================================================
+   PIE
+   ========================================================= */
+
+.teacher-note-footer {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 15px;
+
+  margin-top: 8px;
+  padding-top: 14px;
+
+  border-top:
+    1px solid rgba(255,255,255,.045);
+
+  color: #666b74;
+
+  font-size: 9px;
+}
+
+
+.teacher-dots {
+  display: flex;
+  align-items: center;
+
+  gap: 5px;
+}
+
+
+.teacher-dot {
+  width: 6px;
+  height: 6px;
+
+  padding: 0;
+
+  border: 0;
+
+  border-radius: 50%;
+
+  background: #343840;
+
+  transition:
+    width .16s ease,
+    background .16s ease;
+}
+
+
+.teacher-dot:hover {
+  background: #656a75;
+}
+
+
+.teacher-dot.active {
+  width: 17px;
+
+  border-radius: 99px;
+
+  background: #8b7cf6;
+
+  box-shadow:
+    0 0 9px
+    rgba(139,124,246,.25);
+}
+
+
+/* =========================================================
+   MÒBIL
+   ========================================================= */
+
+@media (max-width: 650px) {
+
+  .teacher-note {
+    padding: 20px 17px;
+  }
+
+  .teacher-quote-wrap {
+    grid-template-columns:
+      28px
+      minmax(0, 1fr)
+      28px;
+
+    gap: 5px;
+
+    min-height: 185px;
+  }
+
+  .teacher-quote-wrap blockquote {
+    padding: 3px;
+
+    font-size: 13px;
+
+    line-height: 1.65;
+  }
+
+  .teacher-note-footer {
+    flex-wrap: wrap;
+  }
+
 }
