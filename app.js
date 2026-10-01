@@ -7219,7 +7219,7 @@ function bindPageEvents() {
 
 initAuth();
 
-function () {
+function teacherQuoteView() {
   const quote =
     teacherQuotes[teacherQuoteIndex];
 
