@@ -2633,17 +2633,7 @@ function dashboardView() {
       </section>
 
 
-      <section class="teacher-note">
-
-        <p class="eyebrow">
-          VIST DES DE L’AULA
-        </p>
-
-        <blockquote>
-          “${esc(quote)}”
-        </blockquote>
-
-      </section>
+      ${teacherQuoteView()}
 
 
     </div>
