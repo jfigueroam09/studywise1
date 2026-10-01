@@ -1937,3 +1937,92 @@ h3 {
   position: relative;
   z-index: 2;
 }
+
+/* =========================================================
+   TRIA · LUZ DE LA CITA DEL PROFESORADO
+   ========================================================= */
+
+.teacher-quote {
+  position: relative;
+  overflow: hidden;
+
+  background: #0b0b0b !important;
+
+  border-left: 2px solid #8b7cff !important;
+  border-radius: 0 10px 10px 0;
+
+  box-shadow: none !important;
+}
+
+
+/* La luz nace en toda la barra vertical */
+
+.teacher-quote::before {
+  content: "";
+
+  position: absolute;
+
+  left: -10px;
+  top: 0;
+
+  width: 105%;
+  height: 100%;
+
+  background: linear-gradient(
+    90deg,
+    rgba(139, 124, 255, 0.16) 0%,
+    rgba(139, 124, 255, 0.10) 18%,
+    rgba(139, 124, 255, 0.055) 38%,
+    rgba(139, 124, 255, 0.025) 58%,
+    rgba(139, 124, 255, 0.008) 78%,
+    transparent 100%
+  );
+
+  filter: blur(22px);
+
+  pointer-events: none;
+
+  z-index: 0;
+}
+
+
+/* Suavizamos también los extremos superior e inferior */
+
+.teacher-quote::after {
+  content: "";
+
+  position: absolute;
+
+  inset: 0;
+
+  background: linear-gradient(
+    180deg,
+    #0b0b0b 0%,
+    transparent 22%,
+    transparent 78%,
+    #0b0b0b 100%
+  );
+
+  opacity: 0.35;
+
+  pointer-events: none;
+
+  z-index: 0;
+}
+
+
+/* Texto por encima de la iluminación */
+
+.teacher-quote-label,
+.teacher-quote blockquote {
+  position: relative;
+  z-index: 1;
+}
+
+.teacher-quote-label {
+  color: #bdbdbd !important;
+}
+
+.teacher-quote blockquote {
+  color: #a8a8a8 !important;
+}
