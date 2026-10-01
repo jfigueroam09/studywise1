@@ -1850,3 +1850,34 @@ label {
     font-size: 25px;
   }
 }
+
+.logout-btn {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  margin: 12px auto 0;
+
+  background: linear-gradient(
+    135deg,
+    #c9343f 0%,
+    #7d1f27 100%
+  );
+
+  color: #fff;
+
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  border-radius: 9px;
+
+  min-height: 40px;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  box-shadow: 0 8px 20px rgba(150, 30, 40, 0.18);
+}
+
+.logout-btn:hover {
+  filter: brightness(1.1);
+}
