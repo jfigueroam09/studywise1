@@ -3159,3 +3159,67 @@ select:focus {
     font-size: 28px !important;
   }
 }
+
+
+/* =========================================================
+   TRIA Â· LUZ MORADA HORIZONTAL DE LA CITA
+   ========================================================= */
+
+.teacher-quote {
+  position: relative !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  background: #0b0b0d !important;
+  border-left: 2px solid #8b7cff !important;
+  box-shadow: none !important;
+}
+
+/* Haz horizontal: nace de la barra morada y se desvanece hacia la derecha */
+.teacher-quote::before {
+  content: "";
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  width: calc(100% + 48px);
+  height: 120px;
+  transform: translateY(-50%);
+  background: linear-gradient(
+    90deg,
+    rgba(139, 124, 255, 0.34) 0%,
+    rgba(139, 124, 255, 0.20) 12%,
+    rgba(139, 124, 255, 0.10) 30%,
+    rgba(139, 124, 255, 0.045) 52%,
+    rgba(139, 124, 255, 0.015) 72%,
+    transparent 100%
+  );
+  filter: blur(24px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Una lÃ­nea de luz muy fina para marcar el origen */
+.teacher-quote::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 62%;
+  height: 1px;
+  transform: translateY(-50%);
+  background: linear-gradient(
+    90deg,
+    rgba(170, 157, 255, 0.55),
+    rgba(139, 124, 255, 0.16),
+    transparent
+  );
+  box-shadow: 0 0 14px rgba(139, 124, 255, 0.24);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.teacher-quote > *,
+.teacher-quote-label,
+.teacher-quote blockquote {
+  position: relative;
+  z-index: 1;
+}
