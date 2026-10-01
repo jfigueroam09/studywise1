@@ -2664,13 +2664,12 @@ function dashboardView() {
 
 
       ${teacherQuoteView()}
+      </div>
 
-
-    </div>
+    </section>
   `;
-
 }
-
+   
 /* =========================================================
    PARTE 4 · TASQUES
    ========================================================= */
@@ -7220,7 +7219,7 @@ function bindPageEvents() {
 
 initAuth();
 
-function teacherQuoteView() {
+function () {
   const quote =
     teacherQuotes[teacherQuoteIndex];
 
