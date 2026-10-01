@@ -7161,13 +7161,87 @@ function bindPageEvents() {
 initAuth();
 
 function teacherQuoteView() {
-  const quote = teacherQuotes[teacherQuoteIndex];
+  const quote =
+    teacherQuotes[teacherQuoteIndex];
 
   return `
     <section class="teacher-note">
 
       <div class="teacher-note-header">
         <div>
-          <p class="eyebrow">LA VISTA DEL PROFESSORAT</p>
+          <p class="eyebrow">
+            LA VISTA DEL PROFESSORAT
+          </p>
         </div>
       </div>
+
+
+      <div class="teacher-quote-wrap">
+
+        <button
+          class="teacher-arrow"
+          data-action="teacher-prev"
+          aria-label="Frase anterior"
+        >
+          ${icon('chevron-left', 17)}
+        </button>
+
+
+        <blockquote>
+
+          <span class="quote-mark">
+            “
+          </span>
+
+          <span class="teacher-quote-text">
+            ${esc(quote)}
+          </span>
+
+          <span class="quote-mark closing">
+            ”
+          </span>
+
+        </blockquote>
+
+
+        <button
+          class="teacher-arrow"
+          data-action="teacher-next"
+          aria-label="Frase següent"
+        >
+          ${icon('chevron-right', 17)}
+        </button>
+
+      </div>
+
+
+      <div class="teacher-note-footer">
+
+        <span>
+          Professorat
+        </span>
+
+
+        <div class="teacher-dots">
+
+          ${teacherQuotes.map((_, index) => `
+            <button
+              class="teacher-dot ${index === teacherQuoteIndex ? 'active' : ''}"
+              data-action="teacher-dot"
+              data-index="${index}"
+              aria-label="Veure frase ${index + 1}"
+            ></button>
+          `).join('')}
+
+        </div>
+
+
+        <span>
+          ${teacherQuoteIndex + 1} / ${teacherQuotes.length}
+        </span>
+
+      </div>
+
+    </section>
+  `;
+}
