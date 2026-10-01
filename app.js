@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 /* =========================================================
-   TRIA · CONFIGURACIÓ
+   TRIA Â· CONFIGURACIÃ“
    ========================================================= */
 
 const SUPABASE_URL =
@@ -47,48 +47,37 @@ let authReady = false;
 
 let authMode = 'login';
 
+let pendingScheduleEvents = [];
+
 
 /* =========================================================
-   AUTENTICACIÓ
+   AUTENTICACIÃ“
    ========================================================= */
 
 function loadState() {
-
   try {
-
-    const raw =
-      localStorage.getItem(KEY);
+    const raw = localStorage.getItem(KEY);
 
     if (!raw) {
-      return structuredClone(
-        defaultState
-      );
+      return structuredClone(defaultState);
     }
 
     return {
-      ...structuredClone(
-        defaultState
-      ),
+      ...structuredClone(defaultState),
       ...JSON.parse(raw)
     };
 
   } catch {
-
-    return structuredClone(
-      defaultState
-    );
-
+    return structuredClone(defaultState);
   }
 }
 
 
 function saveState() {
-
   localStorage.setItem(
     KEY,
     JSON.stringify(state)
   );
-
 }
 
 
@@ -96,8 +85,7 @@ async function initAuth() {
 
   const {
     data
-  } =
-    await supabase.auth.getSession();
+  } = await supabase.auth.getSession();
 
   currentUser =
     data?.session?.user || null;
@@ -118,7 +106,6 @@ async function initAuth() {
 
     }
   );
-
 }
 
 
@@ -138,49 +125,36 @@ async function handleAuth(event) {
       .value;
 
   const errorBox =
-    document.querySelector(
-      '#auth-error'
-    );
+    document.querySelector('#auth-error');
 
   const successBox =
-    document.querySelector(
-      '#auth-success'
-    );
+    document.querySelector('#auth-success');
 
   const button =
-    document.querySelector(
-      '.auth-submit'
-    );
+    document.querySelector('.auth-submit');
 
-  errorBox.classList.add(
-    'hidden'
-  );
+  errorBox.classList.add('hidden');
 
-  successBox.classList.add(
-    'hidden'
-  );
+  successBox.classList.add('hidden');
 
   button.disabled = true;
 
   button.textContent =
     authMode === 'login'
-      ? 'Iniciant sessió...'
+      ? 'Iniciant sessiÃ³...'
       : 'Creant compte...';
 
   try {
 
-    if (
-      authMode === 'login'
-    ) {
+    if (authMode === 'login') {
 
       const {
         error
       } =
-        await supabase.auth
-          .signInWithPassword({
-            email,
-            password
-          });
+        await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
 
       if (error) {
         throw error;
@@ -192,11 +166,10 @@ async function handleAuth(event) {
         data,
         error
       } =
-        await supabase.auth
-          .signUp({
-            email,
-            password
-          });
+        await supabase.auth.signUp({
+          email,
+          password
+        });
 
       if (error) {
         throw error;
@@ -205,7 +178,7 @@ async function handleAuth(event) {
       if (!data.session) {
 
         successBox.textContent =
-          'Compte creat. Revisa el teu correu per confirmar l’adreça abans d’iniciar sessió.';
+          'Compte creat. Revisa el teu correu per confirmar lâ€™adreÃ§a abans dâ€™iniciar sessiÃ³.';
 
         successBox.classList.remove(
           'hidden'
@@ -218,7 +191,6 @@ async function handleAuth(event) {
 
         return;
       }
-
     }
 
   } catch (error) {
@@ -230,24 +202,20 @@ async function handleAuth(event) {
       'hidden'
     );
 
+    button.disabled = false;
+
+    button.textContent =
+      authMode === 'login'
+        ? 'Iniciar sessiÃ³'
+        : 'Crear compte';
   }
-
-  button.disabled = false;
-
-  button.textContent =
-    authMode === 'login'
-      ? 'Iniciar sessió'
-      : 'Crear compte';
-
 }
 
 
 function authErrorMessage(error) {
 
   const message =
-    String(
-      error?.message || ''
-    );
+    String(error?.message || '');
 
   const lower =
     message.toLowerCase();
@@ -257,7 +225,7 @@ function authErrorMessage(error) {
       'invalid login credentials'
     )
   ) {
-    return 'El correu o la contrasenya no són correctes.';
+    return 'El correu o la contrasenya no sÃ³n correctes.';
   }
 
   if (
@@ -265,7 +233,7 @@ function authErrorMessage(error) {
       'email not confirmed'
     )
   ) {
-    return 'Primer has de confirmar el teu correu electrònic.';
+    return 'Primer has de confirmar el teu correu electrÃ²nic.';
   }
 
   if (
@@ -273,7 +241,7 @@ function authErrorMessage(error) {
       'user already registered'
     )
   ) {
-    return 'Aquest correu ja té un compte.';
+    return 'Aquest correu ja tÃ© un compte.';
   }
 
   if (
@@ -281,14 +249,13 @@ function authErrorMessage(error) {
       'password should be at least'
     )
   ) {
-    return 'La contrasenya ha de tenir almenys 6 caràcters.';
+    return 'La contrasenya ha de tenir almenys 6 carÃ cters.';
   }
 
   return (
     message ||
-    'No s’ha pogut completar l’operació.'
+    'No sâ€™ha pogut completar lâ€™operaciÃ³.'
   );
-
 }
 
 
@@ -300,7 +267,6 @@ function toggleAuthMode() {
       : 'login';
 
   render();
-
 }
 
 
@@ -311,15 +277,11 @@ async function logout() {
   currentUser = null;
 
   state =
-    structuredClone(
-      defaultState
-    );
+    structuredClone(defaultState);
 
-  currentPage =
-    'dashboard';
+  currentPage = 'dashboard';
 
   render();
-
 }
 
 
@@ -334,41 +296,23 @@ function uid(prefix = 'id') {
       .toString(36)
       .slice(2, 8)}`
   );
-
 }
 
 
 function esc(value = '') {
 
   return String(value)
-    .replaceAll(
-      '&',
-      '&amp;'
-    )
-    .replaceAll(
-      '<',
-      '&lt;'
-    )
-    .replaceAll(
-      '>',
-      '&gt;'
-    )
-    .replaceAll(
-      '"',
-      '&quot;'
-    )
-    .replaceAll(
-      "'",
-      '&#039;'
-    );
-
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }
 
 
 function todayISO() {
 
-  const d =
-    new Date();
+  const d = new Date();
 
   const offset =
     d.getTimezoneOffset();
@@ -379,26 +323,19 @@ function todayISO() {
   )
     .toISOString()
     .slice(0, 10);
-
 }
 
 
 function formatDate(value) {
 
   if (!value) {
-    return '—';
+    return 'â€”';
   }
 
   const d =
-    new Date(
-      `${value}T12:00:00`
-    );
+    new Date(`${value}T12:00:00`);
 
-  if (
-    Number.isNaN(
-      d.getTime()
-    )
-  ) {
+  if (Number.isNaN(d.getTime())) {
     return value;
   }
 
@@ -410,7 +347,6 @@ function formatDate(value) {
       year: 'numeric'
     }
   ).format(d);
-
 }
 
 
@@ -421,15 +357,12 @@ function daysUntil(value) {
   }
 
   const target =
-    new Date(
-      `${value}T23:59:59`
-    );
+    new Date(`${value}T23:59:59`);
 
   return Math.ceil(
     (target - Date.now()) /
     86400000
   );
-
 }
 
 
@@ -440,7 +373,6 @@ function statusLabel(status) {
     inprogress: 'En curs',
     completed: 'Completada'
   }[status] || 'Pendent';
-
 }
 
 
@@ -452,9 +384,7 @@ function difficultyLabel(value) {
     3: 'Mitjana',
     4: 'Alta',
     5: 'Alta'
-  }[Number(value)] ||
-  'Mitjana';
-
+  }[Number(value)] || 'Mitjana';
 }
 
 
@@ -486,26 +416,19 @@ function chatMarkdown(text) {
         '<em>$1</em>'
       )
       .replace(
-        /^\s*[-•] (.+)$/gm,
+        /^\s*[-â€¢] (.+)$/gm,
         '<li>$1</li>'
       )
       .replace(
-        /^\s*(\d+)\.\s+(.+)$/gm,
-        '<li>$2</li>'
+        /^\s*\d+\.\s+(.+)$/gm,
+        '<li>$1</li>'
       )
       .replace(
         /\n/g,
         '<br>'
       );
 
-  html =
-    html.replace(
-      /(<li>.*?<\/li>)(?:<br>|$)/g,
-      '$1'
-    );
-
   return html;
-
 }
 
 
@@ -513,10 +436,7 @@ function chatMarkdown(text) {
    ICONES
    ========================================================= */
 
-function icon(
-  name,
-  size = 18
-) {
+function icon(name, size = 18) {
 
   const paths = {
 
@@ -531,9 +451,6 @@ function icon(
 
     planner:
       '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 9h18"/>',
-
-    schedule:
-      '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 9h18"/><path d="M8 13h2M14 13h2M8 17h2M14 17h2"/>',
 
     chat:
       '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.8 9.8 0 0 1-4-.8L3 21l1.8-4A8.2 8.2 0 0 1 3 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5Z"/>',
@@ -551,13 +468,13 @@ function icon(
       '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/>',
 
     trash:
-      '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 15H6L5 6"/><path d="M10 11v6M14 11v6"/>',
+      '<path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/>',
 
     check:
-      '<path d="M5 12l4 4L19 6"/>',
+      '<path d="m5 12 4 4L19 6"/>',
 
-    close:
-      '<path d="M6 6l12 12M18 6L6 18"/>',
+    sparkles:
+      '<path d="m12 3-1.2 5.8L5 10l5.8 1.2L12 17l1.2-5.8L19 10l-5.8-1.2Z"/><path d="m19 16-.6 2.4L16 19l2.4.6L19 22l.6-2.4L22 19l-2.4-.6Z"/>',
 
     calendar:
       '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 9h18"/>',
@@ -565,15 +482,17 @@ function icon(
     clock:
       '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
 
-    sparkles:
-      '<path d="m12 3-1.2 4.8L6 9l4.8 1.2L12 15l1.2-4.8L18 9l-4.8-1.2Z"/><path d="m19 14-.6 2.4L16 17l2.4.6L19 20l.6-2.4L22 17l-2.4-.6Z"/>',
+    arrow:
+      '<path d="M5 12h14M13 6l6 6-6 6"/>',
+
+    close:
+      '<path d="m6 6 12 12M18 6 6 18"/>',
 
     refresh:
-      '<path d="M20 11a8 8 0 0 0-14.9-4L3 9"/><path d="M3 4v5h5"/><path d="M4 13a8 8 0 0 0 14.9 4L21 15"/><path d="M21 20v-5h-5"/>',
+      '<path d="M20 11a8.1 8.1 0 0 0-14.7-4L3 10"/><path d="M3 4v6h6"/><path d="M4 13a8.1 8.1 0 0 0 14.7 4L21 14"/><path d="M21 20v-6h-6"/>',
 
-    arrow:
-      '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>'
-
+    download:
+      '<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>'
   };
 
   return `
@@ -589,15 +508,14 @@ function icon(
       stroke-linejoin="round"
       aria-hidden="true"
     >
-      ${paths[name] || ''}
+      ${paths[name] || paths.sparkles}
     </svg>
   `;
-
 }
 
 
 /* =========================================================
-   AUTENTICACIÓ · VISTA
+   LOGIN / REGISTRE
    ========================================================= */
 
 function authView() {
@@ -609,7 +527,7 @@ function authView() {
 
         <div class="auth-brand">
 
-          <div class="brand-mark">
+          <div class="auth-mark">
             ${icon('sparkles', 24)}
           </div>
 
@@ -620,27 +538,26 @@ function authView() {
 
         </div>
 
-        <div class="auth-copy">
+        <div class="auth-heading">
 
           <p class="eyebrow">
-            ${authMode === 'login'
-              ? 'Benvingut'
-              : 'Nou compte'}
+            OrganitzaciÃ³ acadÃ¨mica
           </p>
 
           <h1>
             ${
               authMode === 'login'
-                ? 'Inicia sessió'
+                ? 'Benvingut de nou'
                 : 'Crea el teu compte'
             }
           </h1>
 
           <p>
-            Organitza el teu estudi,
-            prepara els exàmens i deixa
-            que TRIA t'ajudi amb les
-            prioritats.
+            ${
+              authMode === 'login'
+                ? 'Inicia sessiÃ³ per continuar amb TRIA.'
+                : 'Crea un compte per comenÃ§ar a organitzar el teu estudi.'
+            }
           </p>
 
         </div>
@@ -651,37 +568,41 @@ function authView() {
         >
 
           <label>
-            Correu electrònic
+
+            Correu electrÃ²nic
 
             <input
               id="auth-email"
               type="email"
-              required
               autocomplete="email"
               placeholder="tu@exemple.com"
+              required
             >
+
           </label>
 
           <label>
+
             Contrasenya
 
             <input
               id="auth-password"
               type="password"
-              required
-              minlength="6"
               autocomplete="${
                 authMode === 'login'
                   ? 'current-password'
                   : 'new-password'
               }"
-              placeholder="••••••••"
+              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              minlength="6"
+              required
             >
+
           </label>
 
           <div
             id="auth-error"
-            class="auth-message error hidden"
+            class="auth-message hidden"
           ></div>
 
           <div
@@ -690,35 +611,46 @@ function authView() {
           ></div>
 
           <button
-            type="submit"
             class="btn primary auth-submit"
+            type="submit"
           >
             ${
               authMode === 'login'
-                ? 'Iniciar sessió'
+                ? 'Iniciar sessiÃ³'
                 : 'Crear compte'
             }
           </button>
 
         </form>
 
-        <button
-          type="button"
-          class="auth-switch"
-          data-action="toggle-auth"
-        >
-          ${
-            authMode === 'login'
-              ? 'Crear compte'
-              : 'Iniciar sessió'
-          }
-        </button>
+        <div class="auth-switch">
+
+          <span>
+            ${
+              authMode === 'login'
+                ? 'Encara no tens compte?'
+                : 'Ja tens un compte?'
+            }
+          </span>
+
+          <button
+            type="button"
+            class="text-btn"
+            data-action="toggle-auth"
+          >
+            ${
+              authMode === 'login'
+                ? 'Crear compte'
+                : 'Iniciar sessiÃ³'
+            }
+          </button>
+
+        </div>
 
       </div>
 
     </div>
   `;
-
 }
 
 
@@ -730,12 +662,10 @@ function bindAuthEvents() {
     );
 
   if (form) {
-
     form.addEventListener(
       'submit',
       handleAuth
     );
-
   }
 
   const toggle =
@@ -744,19 +674,16 @@ function bindAuthEvents() {
     );
 
   if (toggle) {
-
     toggle.addEventListener(
       'click',
       toggleAuthMode
     );
-
   }
-
 }
 
 
 /* =========================================================
-   NAVEGACIÓ
+   NAVEGACIÃ“
    ========================================================= */
 
 function navItems() {
@@ -764,14 +691,13 @@ function navItems() {
   return [
     ['dashboard', 'Tauler', 'dashboard'],
     ['tasks', 'Tasques', 'tasks'],
-    ['exams', 'Exàmens', 'exams'],
+    ['exams', 'ExÃ mens', 'exams'],
+    ['schedule', 'Horari', 'calendar'],
     ['planner', 'Planificador', 'planner'],
-    ['schedule', 'Horari', 'schedule'],
     ['chat', "IA d'estudi", 'chat'],
-    ['progress', 'Progrés', 'progress'],
-    ['settings', 'Avaluació', 'settings']
+    ['progress', 'ProgrÃ©s', 'progress'],
+    ['settings', 'AvaluaciÃ³', 'settings']
   ];
-
 }
 
 
@@ -783,11 +709,7 @@ function pageTitle() {
         item[0] === currentPage
     );
 
-  return (
-    item?.[1] ||
-    'Tauler'
-  );
-
+  return item?.[1] || 'Tauler';
 }
 
 
@@ -858,7 +780,7 @@ function layout() {
             class="logout-btn"
             data-action="logout"
           >
-            Tancar sessió
+            Tancar sessiÃ³
           </button>
 
         </div>
@@ -872,7 +794,7 @@ function layout() {
           <div>
 
             <p class="eyebrow">
-              Organització acadèmica
+              OrganitzaciÃ³ acadÃ¨mica
             </p>
 
             <h1>
@@ -911,20 +833,6 @@ function layout() {
                 : ''
             }
 
-            ${
-              currentPage === 'schedule'
-                ? `
-                  <button
-                    class="btn primary"
-                    data-action="new-schedule-event"
-                  >
-                    ${icon('plus', 17)}
-                    Nou esdeveniment
-                  </button>
-                `
-                : ''
-            }
-
           </div>
 
         </header>
@@ -937,7 +845,6 @@ function layout() {
 
     </div>
   `;
-
 }
 
 
@@ -986,7 +893,6 @@ function buildModalHtml() {
 
     </div>
   `;
-
 }
 
 
@@ -1020,16 +926,13 @@ function statCard(
 
     </div>
   `;
-
 }
 
 
 function taskCard(task) {
 
   const days =
-    daysUntil(
-      task.dueDate
-    );
+    daysUntil(task.dueDate);
 
   const urgent =
     task.status !== 'completed' &&
@@ -1076,7 +979,7 @@ function taskCard(task) {
           <p>
             ${esc(
               task.description ||
-              'Sense descripció'
+              'Sense descripciÃ³'
             )}
           </p>
 
@@ -1084,16 +987,12 @@ function taskCard(task) {
 
             <span>
               ${icon('calendar', 14)}
-              ${formatDate(
-                task.dueDate
-              )}
+              ${formatDate(task.dueDate)}
             </span>
 
             <span>
               ${icon('clock', 14)}
-              ${Number(
-                task.minutes || 30
-              )}
+              ${Number(task.minutes || 30)}
               min
             </span>
 
@@ -1122,11 +1021,19 @@ function taskCard(task) {
 
       <div class="task-actions">
 
+        <span
+          class="status ${
+            task.status
+          }"
+        >
+          ${statusLabel(task.status)}
+        </span>
+
         <button
           class="icon-btn"
           data-action="edit-task"
           data-id="${task.id}"
-          aria-label="Editar"
+          title="Editar"
         >
           ${icon('edit', 16)}
         </button>
@@ -1135,7 +1042,7 @@ function taskCard(task) {
           class="icon-btn danger"
           data-action="delete-task"
           data-id="${task.id}"
-          aria-label="Eliminar"
+          title="Eliminar"
         >
           ${icon('trash', 16)}
         </button>
@@ -1144,131 +1051,70 @@ function taskCard(task) {
 
     </article>
   `;
-
-}
-
-
-function examCard(exam) {
-
-  return `
-    <article class="exam-card">
-
-      <div class="exam-date">
-
-        <strong>
-          ${formatDate(exam.date)}
-        </strong>
-
-      </div>
-
-      <div class="exam-info">
-
-        <h3>
-          ${esc(exam.subject)}
-        </h3>
-
-        <p>
-          ${esc(
-            exam.syllabus ||
-            'Sense temari indicat'
-          )}
-        </p>
-
-        <div class="exam-meta">
-
-          <span>
-            Dificultat:
-            ${difficultyLabel(
-              exam.difficulty
-            )}
-          </span>
-
-          <span>
-            ${Number(
-              exam.availableMinutes || 0
-            )} min disponibles
-          </span>
-
-        </div>
-
-      </div>
-
-      <div class="exam-actions">
-
-        <button
-          class="icon-btn"
-          data-action="edit-exam"
-          data-id="${exam.id}"
-        >
-          ${icon('edit', 16)}
-        </button>
-
-        <button
-          class="icon-btn danger"
-          data-action="delete-exam"
-          data-id="${exam.id}"
-        >
-          ${icon('trash', 16)}
-        </button>
-
-      </div>
-
-    </article>
-  `;
-
 }
 
 
 /* =========================================================
-   DASHBOARD
+   CITES DEL PROFESSORAT
    ========================================================= */
 
 const teacherQuotes = [
-  'La intel·ligència artificial ha de servir per ajudar l’alumnat a aprendre millor, no per substituir el seu esforç.',
-  'La tecnologia és més útil quan ajuda a organitzar, comprendre i prendre decisions amb criteri propi.',
-  'Aprendre continua sent responsabilitat de l’alumne; la IA pot ser una eina per fer aquest procés més ordenat.',
-  'Una bona planificació pot convertir moltes hores d’estudi en un treball més eficient i conscient.'
+
+  "En l'Ã mbit estrictament acadÃ¨mic, no s'hauria d'utilitzar per adquirir coneixements, hÃ bits, esperit crÃ­tic, etc., nomÃ©s s'hauria d'utilitzar en Ã mbits on hi hagi un adult que indiqui el bon i mal Ãºs d'aquesta eina.",
+
+  "Com a docent, crec que l'alumne ha d'utilitzar la IA per ajudar-se a entendre i practicar, no perquÃ¨ li faci la feina. Primer ha d'intentar resoldre la tasca pel seu compte i, desprÃ©s, fer-la servir per demanar explicacions o pistes, generar exercicis i revisar el que ha fet, no per obtenir la resposta feta. TambÃ© ha de contrastar sempre la informaciÃ³, perquÃ¨ la IA s'equivoca, i ser transparent sobre com l'ha utilitzada. En definitiva, la IA ajuda a aprendre quan et fa mÃ©s capaÃ§; si en depens per fer allÃ² que hauries de saber fer sol, t'estÃ  perjudicant.",
+
+  "Com un reforÃ§ de l'aprenentatge, no com un aprenentatge. Hi ha d'haver un filtre humÃ .",
+
+  "El problema Ã©s que la IA Ã©s addictiva. Primer has de tractar d'esforÃ§ar-te a entendre les coses i resoldre-les per tu mateix. Llavors la IA pot resoldre't dubtes particulars. El problema Ã©s quan ni pensem quÃ¨ ens demanen, li passem el problema a la IA i enganxem sense el que ens dona, sense entendre-ho ni raonar-ho. Sovint, no fent la pregunta adequada i concisa i rebent resultats ambigus.",
+
+  "Tant per aprofundir sobre un tema com a l'hora de resoldre dubtes.",
+
+  "De manera Ã¨tica i responsable.",
+
+  "Com ajuda a fomentar el pensament crÃ­tic.",
+
+  "Per poder extreure informaciÃ³ de diferents formats de continguts i poder obtenir un resum endreÃ§at on estigui tot connectat.",
+
+  "Haurien d'aprendre les seves limitacions i contraindicacions i no haurien de recÃ³rrer a la IA com a primera opciÃ³."
+
 ];
 
-function randomTeacherQuote() {
-
-  return teacherQuotes[
+const teacherQuote =
+  teacherQuotes[
     Math.floor(
       Math.random() *
       teacherQuotes.length
     )
   ];
 
-}
 
-let teacherQuote =
-  randomTeacherQuote();
-
+/* =========================================================
+   TAULER
+   ========================================================= */
 
 function dashboardView() {
 
   const pending =
-    state.tasks
-      .filter(
-        task =>
-          task.status !==
-          'completed'
-      );
+    state.tasks.filter(
+      t =>
+        t.status !==
+        'completed'
+    );
 
   const completed =
-    state.tasks
-      .filter(
-        task =>
-          task.status ===
-          'completed'
-      );
+    state.tasks.filter(
+      t =>
+        t.status ===
+        'completed'
+    );
 
   const urgent =
     pending
       .filter(
-        task =>
+        t =>
           daysUntil(
-            task.dueDate
+            t.dueDate
           ) <= 2
       )
       .sort(
@@ -1334,20 +1180,18 @@ function dashboardView() {
 
           <p>
             Consulta les tasques, prepara els
-            exàmens i deixa que la IA t'ajudi
+            exÃ mens i deixa que la IA t'ajudi
             a ordenar les prioritats.
           </p>
 
           <div class="teacher-quote">
 
             <div class="teacher-quote-label">
-              ✦ Veu del professorat sobre l'IA
+              âœ¦ Veu del professorat sobre l'IA
             </div>
 
             <blockquote>
-              “${esc(
-                teacherQuote
-              )}”
+              â€œ${esc(teacherQuote)}â€
             </blockquote>
 
           </div>
@@ -1374,25 +1218,23 @@ function dashboardView() {
         )}
 
         ${statCard(
-          'Exàmens propers',
+          'ExÃ mens propers',
           upcomingExams.length,
-          'Següents dates',
+          'SegÃ¼ents dates',
           'exams'
         )}
 
         ${statCard(
-          'Progrés',
+          'ProgrÃ©s',
           `${percent}%`,
-          `${completedMinutes} / ${
-            totalMinutes || 0
-          } min`,
+          `${completedMinutes} / ${totalMinutes || 0} min`,
           'progress'
         )}
 
         ${statCard(
           'Urgents',
           urgent.length,
-          'En els pròxims 2 dies',
+          'En els prÃ²xims 2 dies',
           'clock'
         )}
 
@@ -1411,7 +1253,7 @@ function dashboardView() {
               </p>
 
               <h2>
-                Què hauries de fer ara?
+                QuÃ¨ hauries de fer ara?
               </h2>
 
             </div>
@@ -1436,15 +1278,14 @@ function dashboardView() {
               )
                 .slice(0, 4)
                 .map(taskCard)
-                .join('')
-                ||
-                `
-                  <div class="empty">
-                    <p>
-                      No tens tasques pendents.
-                    </p>
-                  </div>
-                `
+                .join('') ||
+
+              `
+                <div class="empty">
+                  No tens tasques pendents.
+                  Afegeix-ne una per comenÃ§ar.
+                </div>
+              `
             }
 
           </div>
@@ -1458,11 +1299,11 @@ function dashboardView() {
             <div>
 
               <p class="eyebrow">
-                Exàmens
+                Calendari acadÃ¨mic
               </p>
 
               <h2>
-                Pròxims exàmens
+                PrÃ²xims exÃ mens
               </h2>
 
             </div>
@@ -1471,26 +1312,76 @@ function dashboardView() {
               class="text-btn"
               data-page="exams"
             >
-              Veure exàmens
+              Veure exÃ mens
               ${icon('arrow', 15)}
             </button>
 
           </div>
 
-          <div class="list">
+          <div class="exam-list">
 
             ${
-              upcomingExams
-                .map(examCard)
-                .join('')
-                ||
-                `
-                  <div class="empty">
-                    <p>
-                      No tens exàmens registrats.
-                    </p>
+              upcomingExams.map(
+                exam => `
+                  <div class="exam-row">
+
+                    <div class="date-box">
+
+                      <strong>
+                        ${
+                          new Date(
+                            `${exam.date}T12:00:00`
+                          ).getDate()
+                        }
+                      </strong>
+
+                      <span>
+                        ${
+                          new Intl.DateTimeFormat(
+                            'ca-ES',
+                            {
+                              month: 'short'
+                            }
+                          ).format(
+                            new Date(
+                              `${exam.date}T12:00:00`
+                            )
+                          )
+                        }
+                      </span>
+
+                    </div>
+
+                    <div>
+
+                      <strong>
+                        ${esc(exam.subject)}
+                      </strong>
+
+                      <span>
+                        ${esc(
+                          exam.syllabus ||
+                          'Sense temari'
+                        )}
+                      </span>
+
+                    </div>
+
+                    <span class="badge">
+                      ${difficultyLabel(
+                        exam.difficulty
+                      )}
+                    </span>
+
                   </div>
                 `
+              ).join('') ||
+
+              `
+                <div class="empty">
+                  No hi ha exÃ mens registrats.
+                </div>
+              `
             }
 
           </div>
@@ -1499,43 +1390,47 @@ function dashboardView() {
 
       </div>
 
-      <section class="panel ai-summary">
+      <section class="panel">
 
         <div class="panel-head">
 
           <div>
 
             <p class="eyebrow">
-              Intel·ligència artificial
+              Pla actual
             </p>
 
             <h2>
-              Pla recomanat
+              ${
+                state.plan?.summary
+                  ? 'RecomanaciÃ³ de la IA'
+                  : 'Encara no tens un pla generat'
+              }
             </h2>
 
           </div>
 
-          <span class="ai-badge">
-            ${icon('sparkles', 14)}
-            IA
-          </span>
+          <button
+            class="btn secondary"
+            data-action="recalculate"
+          >
+            ${icon('refresh', 16)}
+            Recalcular
+          </button>
 
         </div>
 
-        <p>
-          ${
-            esc(
-              state.plan?.summary ||
-              'Encara no tens cap pla calculat. La IA pot analitzar les teves tasques i exàmens per proposar-te un ordre de treball.'
-            )
-          }
+        <p class="plan-summary">
+          ${esc(
+            state.plan?.summary ||
+            'Afegeix tasques i exÃ mens i prem Â«Recalcular amb IAÂ» per generar una proposta.'
+          )}
         </p>
 
       </section>
 
     </div>
   `;
-
 }
 
 
@@ -1546,176 +1441,877 @@ function dashboardView() {
 function tasksView() {
 
   const tasks =
-    [...state.tasks]
-      .sort(
-        (a, b) =>
-          a.dueDate.localeCompare(
-            b.dueDate
-          )
-      );
+    [...state.tasks].sort(
+      (a, b) =>
+        a.dueDate.localeCompare(
+          b.dueDate
+        )
+    );
 
   return `
     <div class="page">
 
-      <div class="section-intro">
+      <div class="toolbar">
 
         <div>
 
           <p class="eyebrow">
-            Organització
+            GestiÃ³
           </p>
 
           <h2>
-            Les meves tasques
+            Totes les tasques
           </h2>
-
-          <p class="muted">
-            Controla el que tens pendent,
-            el que estàs fent i el que ja has acabat.
-          </p>
 
         </div>
 
       </div>
 
-      <section class="panel">
+      <div class="task-list">
 
         ${
-          tasks.length
-            ? `
-              <div class="list">
-                ${tasks
-                  .map(taskCard)
-                  .join('')}
-              </div>
-            `
-            : `
-              <div class="empty">
+          tasks
+            .map(taskCard)
+            .join('') ||
 
-                <div class="empty-icon">
-                  ${icon(
-                    'tasks',
-                    25
-                  )}
-                </div>
-
-                <h3>
-                  Encara no tens tasques
-                </h3>
-
-                <p>
-                  Afegeix la primera tasca
-                  per començar a organitzar-te.
-                </p>
-
-                <button
-                  class="btn primary"
-                  data-action="new-task"
-                >
-                  ${icon('plus', 16)}
-                  Nova tasca
-                </button>
-
-              </div>
-            `
+          `
+            <div class="empty large">
+              Encara no tens tasques.
+              Crea la primera amb el botÃ³
+              Â«Nova tascaÂ».
+            </div>
+          `
         }
 
-      </section>
+      </div>
 
     </div>
   `;
-
 }
 
 
 /* =========================================================
-   EXÀMENS
+   EXÃ€MENS
    ========================================================= */
 
 function examsView() {
 
   const exams =
-    [...state.exams]
-      .sort(
-        (a, b) =>
-          a.date.localeCompare(
-            b.date
-          )
-      );
+    [...state.exams].sort(
+      (a, b) =>
+        a.date.localeCompare(
+          b.date
+        )
+    );
 
   return `
     <div class="page">
 
-      <div class="section-intro">
+      <div class="toolbar">
 
         <div>
 
           <p class="eyebrow">
-            Preparació
+            Calendari
           </p>
 
           <h2>
-            Els meus exàmens
+            ExÃ mens
           </h2>
-
-          <p class="muted">
-            Tingues les dates i el temari
-            controlats.
-          </p>
 
         </div>
 
       </div>
 
-      <section class="panel">
+      <div class="exam-grid">
 
         ${
-          exams.length
-            ? `
-              <div class="list">
-                ${exams
-                  .map(examCard)
-                  .join('')}
-              </div>
-            `
-            : `
-              <div class="empty">
+          exams.map(
+            exam => `
+              <article class="exam-card">
 
-                <div class="empty-icon">
-                  ${icon(
-                    'exams',
-                    25
-                  )}
+                <div class="exam-card-top">
+
+                  <span class="badge">
+                    ${esc(exam.subject)}
+                  </span>
+
+                  <span class="status pending">
+                    ${formatDate(exam.date)}
+                  </span>
+
                 </div>
 
                 <h3>
-                  No hi ha exàmens
+                  ${esc(exam.subject)}
                 </h3>
 
                 <p>
-                  Afegeix el teu primer
-                  examen.
+                  ${esc(
+                    exam.syllabus ||
+                    'Sense temari definit.'
+                  )}
                 </p>
 
-                <button
-                  class="btn primary"
-                  data-action="new-exam"
-                >
-                  ${icon('plus', 16)}
-                  Nou examen
-                </button>
+                <div class="exam-details">
 
-              </div>
+                  <span>
+                    Dificultat:
+                    ${difficultyLabel(
+                      exam.difficulty
+                    )}
+                  </span>
+
+                  <span>
+                    Temps disponible:
+                    ${Number(
+                      exam.availableMinutes ||
+                      0
+                    )}
+                    min
+                  </span>
+
+                </div>
+
+                <div class="card-actions">
+
+                  <button
+                    class="btn secondary"
+                    data-action="edit-exam"
+                    data-id="${exam.id}"
+                  >
+                    ${icon('edit', 15)}
+                    Editar
+                  </button>
+
+                  <button
+                    class="btn ghost danger-btn"
+                    data-action="delete-exam"
+                    data-id="${exam.id}"
+                  >
+                    ${icon('trash', 15)}
+                    Eliminar
+                  </button>
+
+                </div>
+
+              </article>
             `
+          ).join('') ||
+
+          `
+            <div class="empty large">
+              No hi ha exÃ mens registrats.
+            </div>
+          `
         }
 
+      </div>
+
+    </div>
+  `;
+}
+
+
+
+/* =========================================================
+   HORARI Â· CLASSES I ESCANEIG IA
+   ========================================================= */
+
+const scheduleDays = [
+  ['monday', 'Dilluns'],
+  ['tuesday', 'Dimarts'],
+  ['wednesday', 'Dimecres'],
+  ['thursday', 'Dijous'],
+  ['friday', 'Divendres']
+];
+
+function scheduleView() {
+
+  const grouped = Object.fromEntries(
+    scheduleDays.map(([key]) => [
+      key,
+      state.scheduleEvents
+        .filter(event => event.day === key)
+        .sort((a, b) =>
+          String(a.startTime || '').localeCompare(
+            String(b.startTime || '')
+          )
+        )
+    ])
+  );
+
+  return `
+    <div class="page">
+
+      <div class="toolbar schedule-toolbar">
+
+        <div>
+          <p class="eyebrow">HORARI PERSONAL</p>
+          <h2>El teu horari</h2>
+          <p class="muted">
+            Fes una foto del teu horari i deixa que TRIA el llegeixi.
+          </p>
+        </div>
+
+        <div class="schedule-toolbar-actions">
+
+          <input
+            id="schedule-image-input"
+            class="schedule-file-input"
+            type="file"
+            accept="image/*"
+            capture="environment"
+          >
+
+          <button
+            class="btn primary"
+            data-action="scan-schedule"
+          >
+            ${icon('camera', 17)}
+            Fes una foto del meu horari
+          </button>
+
+          <button
+            class="btn secondary"
+            data-action="new-schedule-event"
+          >
+            ${icon('plus', 17)}
+            Afegir classe
+          </button>
+
+        </div>
+
+      </div>
+
+      <section class="schedule-import-card">
+        <div class="schedule-import-icon">
+          ${icon('sparkles', 20)}
+        </div>
+
+        <div>
+          <strong>La IA pot crear-lo per tu</strong>
+          <p>
+            Fotografia l'horari de l'institut. TRIA detectarÃ 
+            els dies, les hores i les assignatures i et deixarÃ 
+            revisar el resultat abans de guardar-lo.
+          </p>
+        </div>
       </section>
+
+      <section class="schedule-board">
+
+        ${scheduleDays.map(([dayKey, dayLabel]) => `
+          <div class="schedule-day">
+
+            <div class="schedule-day-head">
+              <span>${dayLabel}</span>
+              <small>${grouped[dayKey].length} classe${grouped[dayKey].length === 1 ? '' : 's'}</small>
+            </div>
+
+            <div class="schedule-day-list">
+
+              ${
+                grouped[dayKey].map(event => `
+                  <article class="schedule-event-card">
+
+                    <div class="schedule-event-time">
+                      <strong>${esc(event.startTime)}</strong>
+                      <span>${esc(event.endTime)}</span>
+                    </div>
+
+                    <div class="schedule-event-main">
+                      <strong>${esc(event.title)}</strong>
+                      <span>${esc(event.subject || '')}</span>
+                      ${
+                        event.notes
+                          ? `<small>${esc(event.notes)}</small>`
+                          : ''
+                      }
+                    </div>
+
+                    <span class="schedule-type">
+                      ${scheduleTypeLabel(event.type)}
+                    </span>
+
+                    <div class="schedule-event-actions">
+                      <button
+                        class="icon-btn"
+                        data-action="edit-schedule-event"
+                        data-id="${event.id}"
+                        aria-label="Editar"
+                      >
+                        ${icon('edit', 15)}
+                      </button>
+
+                      <button
+                        class="icon-btn danger-icon"
+                        data-action="delete-schedule-event"
+                        data-id="${event.id}"
+                        aria-label="Eliminar"
+                      >
+                        ${icon('trash', 15)}
+                      </button>
+                    </div>
+
+                  </article>
+                `).join('') || `
+                  <div class="schedule-empty">
+                    <span>No hi ha classes registrades.</span>
+                    <button
+                      class="btn ghost"
+                      data-action="new-schedule-event"
+                      data-day="${dayKey}"
+                    >
+                      Afegir
+                    </button>
+                  </div>
+                `
+              }
+
+            </div>
+
+          </div>
+        `).join('')}
+
+      </section>
+
+      ${
+        state.scheduleEvents.length
+          ? `
+            <section class="schedule-ai-note">
+              ${icon('sparkles', 17)}
+              <div>
+                <strong>Horari connectat amb la IA</strong>
+                <p>
+                  Quan creÃ¯s o recalculis el teu pla d'estudi,
+                  TRIA tindrÃ  en compte aquestes hores ocupades.
+                </p>
+              </div>
+            </section>
+          `
+          : ''
+      }
+
+    </div>
+  `;
+}
+
+function scheduleTypeLabel(type) {
+
+  const labels = {
+    class: 'Classe',
+    exam: 'Examen',
+    study: 'Estudi',
+    personal: 'Personal'
+  };
+
+  return labels[type] || 'Classe';
+}
+
+function openScheduleEventModal(id = null) {
+
+  modalMode = 'schedule-event';
+  editingId = id;
+
+  const event =
+    id
+      ? state.scheduleEvents.find(
+          item => item.id === id
+        )
+      : null;
+
+  const modal =
+    document.querySelector('#modal');
+
+  const form =
+    document.querySelector('#modal-form');
+
+  document.querySelector('#modal-eyebrow').textContent =
+    'HORARI';
+
+  document.querySelector('#modal-title').textContent =
+    event ? 'Editar activitat' : 'Nova activitat';
+
+  form.innerHTML = `
+    <div class="form-grid">
+
+      <label class="full">
+        TÃ­tol
+        <input
+          name="title"
+          required
+          value="${esc(event?.title || '')}"
+          placeholder="Ex. MatemÃ tiques"
+        >
+      </label>
+
+      <label>
+        Assignatura
+        <input
+          name="subject"
+          value="${esc(event?.subject || '')}"
+          placeholder="Ex. MatemÃ tiques"
+        >
+      </label>
+
+      <label>
+        Tipus
+        <select name="type">
+          ${[
+            ['class', 'Classe'],
+            ['exam', 'Examen'],
+            ['study', 'Estudi'],
+            ['personal', 'Personal']
+          ].map(([value, label]) => `
+            <option
+              value="${value}"
+              ${(event?.type || 'class') === value ? 'selected' : ''}
+            >
+              ${label}
+            </option>
+          `).join('')}
+        </select>
+      </label>
+
+      <label>
+        Dia
+        <select name="day">
+          ${scheduleDays.map(([value, label]) => `
+            <option
+              value="${value}"
+              ${(event?.day || 'monday') === value ? 'selected' : ''}
+            >
+              ${label}
+            </option>
+          `).join('')}
+        </select>
+      </label>
+
+      <label>
+        Hora d'inici
+        <input
+          name="startTime"
+          type="time"
+          required
+          value="${esc(event?.startTime || '08:00')}"
+        >
+      </label>
+
+      <label>
+        Hora de finalitzaciÃ³
+        <input
+          name="endTime"
+          type="time"
+          required
+          value="${esc(event?.endTime || '09:00')}"
+        >
+      </label>
+
+      <label class="full">
+        Notes
+        <textarea
+          name="notes"
+          rows="3"
+          placeholder="Opcional"
+        >${esc(event?.notes || '')}</textarea>
+      </label>
+
+    </div>
+
+    <div class="modal-actions">
+
+      <button
+        type="button"
+        class="btn secondary"
+        data-action="close-modal"
+      >
+        CancelÂ·lar
+      </button>
+
+      <button
+        type="submit"
+        class="btn primary"
+      >
+        Guardar activitat
+      </button>
 
     </div>
   `;
 
+  form.onsubmit = saveScheduleEventFromForm;
+
+  modal.classList.remove('hidden');
 }
 
+function saveScheduleEventFromForm(event) {
+
+  event.preventDefault();
+
+  const data = new FormData(event.currentTarget);
+
+  const startTime = String(data.get('startTime') || '');
+  const endTime = String(data.get('endTime') || '');
+
+  if (!startTime || !endTime || endTime <= startTime) {
+    alert('Lâ€™hora de finalitzaciÃ³ ha de ser posterior a lâ€™hora dâ€™inici.');
+    return;
+  }
+
+  const item = {
+    id: editingId || uid('schedule'),
+    title: String(data.get('title') || '').trim(),
+    subject: String(data.get('subject') || '').trim(),
+    type: String(data.get('type') || 'class'),
+    day: String(data.get('day') || 'monday'),
+    startTime,
+    endTime,
+    notes: String(data.get('notes') || '').trim()
+  };
+
+  if (!item.title) {
+    alert('Escriu un tÃ­tol.');
+    return;
+  }
+
+  if (editingId) {
+    state.scheduleEvents =
+      state.scheduleEvents.map(
+        current =>
+          current.id === editingId
+            ? item
+            : current
+      );
+  } else {
+    state.scheduleEvents.push(item);
+  }
+
+  saveState();
+  closeModal();
+  render();
+}
+
+function deleteScheduleEvent(id) {
+
+  if (!confirm('Vols eliminar aquesta activitat de lâ€™horari?')) {
+    return;
+  }
+
+  state.scheduleEvents =
+    state.scheduleEvents.filter(
+      event => event.id !== id
+    );
+
+  saveState();
+  render();
+}
+
+function openScheduleImportModal(events, sourceName = '') {
+
+  pendingScheduleEvents = events.map((event, index) => ({
+    id: event.id || uid(`scan-${index}`),
+    title: event.title || '',
+    subject: event.subject || '',
+    type: event.type || 'class',
+    day: event.day || 'monday',
+    startTime: event.startTime || '08:00',
+    endTime: event.endTime || '09:00',
+    notes: event.notes || ''
+  }));
+
+  const modal =
+    document.querySelector('#modal');
+
+  const form =
+    document.querySelector('#modal-form');
+
+  document.querySelector('#modal-eyebrow').textContent =
+    'IA Â· LECTURA DE Lâ€™IMATGE';
+
+  document.querySelector('#modal-title').textContent =
+    'Revisa el teu horari';
+
+  form.innerHTML = `
+    <div class="schedule-scan-intro">
+      ${icon('camera', 18)}
+      <div>
+        <strong>TRIA ha detectat ${pendingScheduleEvents.length} activitats.</strong>
+        <span>${esc(sourceName || 'Revisa les dades abans de guardar-les.')}</span>
+      </div>
+    </div>
+
+    <div class="schedule-scan-table">
+      <div class="schedule-scan-row schedule-scan-head">
+        <span>Dia</span>
+        <span>Inici</span>
+        <span>Final</span>
+        <span>Assignatura</span>
+      </div>
+
+      ${
+        pendingScheduleEvents.map((event, index) => `
+          <div class="schedule-scan-row">
+
+            <select data-scan-field="day" data-index="${index}">
+              ${scheduleDays.map(([value, label]) => `
+                <option value="${value}" ${event.day === value ? 'selected' : ''}>
+                  ${label}
+                </option>
+              `).join('')}
+            </select>
+
+            <input
+              type="time"
+              data-scan-field="startTime"
+              data-index="${index}"
+              value="${esc(event.startTime)}"
+            >
+
+            <input
+              type="time"
+              data-scan-field="endTime"
+              data-index="${index}"
+              value="${esc(event.endTime)}"
+            >
+
+            <input
+              type="text"
+              data-scan-field="title"
+              data-index="${index}"
+              value="${esc(event.title)}"
+              placeholder="Assignatura"
+            >
+
+          </div>
+        `).join('')
+      }
+    </div>
+
+    <div class="schedule-scan-warning">
+      ${icon('info', 16)}
+      <span>
+        La lectura d'una fotografia pot contenir errors.
+        Revisa especialment dies i hores.
+      </span>
+    </div>
+
+    <div class="modal-actions">
+
+      <button
+        type="button"
+        class="btn secondary"
+        data-action="close-modal"
+      >
+        CancelÂ·lar
+      </button>
+
+      <button
+        type="submit"
+        class="btn primary"
+      >
+        ${icon('check', 16)}
+        Confirmar horari
+      </button>
+
+    </div>
+  `;
+
+  form.onsubmit = saveScheduleImportFromForm;
+
+  form
+    .querySelectorAll('[data-scan-field]')
+    .forEach(input => {
+      input.addEventListener('input', updatePendingScheduleField);
+      input.addEventListener('change', updatePendingScheduleField);
+    });
+
+  modal.classList.remove('hidden');
+}
+
+function updatePendingScheduleField(event) {
+
+  const index =
+    Number(event.currentTarget.dataset.index);
+
+  const field =
+    event.currentTarget.dataset.scanField;
+
+  if (!pendingScheduleEvents[index]) {
+    return;
+  }
+
+  pendingScheduleEvents[index][field] =
+    event.currentTarget.value;
+}
+
+function saveScheduleImportFromForm(event) {
+
+  event.preventDefault();
+
+  const valid = pendingScheduleEvents.filter(
+    event =>
+      event.title &&
+      event.startTime &&
+      event.endTime &&
+      event.endTime > event.startTime
+  );
+
+  if (!valid.length) {
+    alert('No hi ha cap activitat vÃ lida per guardar.');
+    return;
+  }
+
+  state.scheduleEvents = [
+    ...state.scheduleEvents,
+    ...valid.map(event => ({
+      ...event,
+      id: uid('schedule')
+    }))
+  ];
+
+  pendingScheduleEvents = [];
+
+  saveState();
+  closeModal();
+  render();
+
+  alert('Horari importat correctament.');
+}
+
+async function handleScheduleImage(event) {
+
+  const file =
+    event.currentTarget.files?.[0];
+
+  event.currentTarget.value = '';
+
+  if (!file) {
+    return;
+  }
+
+  if (!file.type.startsWith('image/')) {
+    alert('Selecciona una imatge del teu horari.');
+    return;
+  }
+
+  const button =
+    document.querySelector(
+      '[data-action="scan-schedule"]'
+    );
+
+  if (button) {
+    button.disabled = true;
+    button.innerHTML =
+      `${icon('sparkles', 17)} Llegint horari...`;
+  }
+
+  try {
+
+    const image =
+      await prepareScheduleImage(file);
+
+    const response =
+      await fetch(
+        '/api/ai/schedule',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            image: image.base64,
+            mimeType: image.mimeType
+          })
+        }
+      );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+        'No sâ€™ha pogut llegir lâ€™horari.'
+      );
+    }
+
+    if (!Array.isArray(data.events) || !data.events.length) {
+      throw new Error(
+        'La IA no ha detectat cap classe. Prova amb una foto mÃ©s clara i frontal.'
+      );
+    }
+
+    openScheduleImportModal(
+      data.events,
+      'Pots corregir qualsevol dada abans de confirmar.'
+    );
+
+  } catch (error) {
+
+    alert(
+      `No sâ€™ha pogut llegir lâ€™horari: ${error.message}`
+    );
+
+  } finally {
+
+    if (button) {
+      button.disabled = false;
+      button.innerHTML =
+        `${icon('camera', 17)} Fes una foto del meu horari`;
+    }
+  }
+}
+
+async function prepareScheduleImage(file) {
+
+  const bitmap =
+    await createImageBitmap(file);
+
+  const maxSize = 1800;
+
+  const scale =
+    Math.min(
+      1,
+      maxSize /
+        Math.max(
+          bitmap.width,
+          bitmap.height
+        )
+    );
+
+  const canvas =
+    document.createElement('canvas');
+
+  canvas.width =
+    Math.max(1, Math.round(bitmap.width * scale));
+
+  canvas.height =
+    Math.max(1, Math.round(bitmap.height * scale));
+
+  const context =
+    canvas.getContext('2d');
+
+  context.drawImage(
+    bitmap,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  const dataUrl =
+    canvas.toDataURL(
+      'image/jpeg',
+      0.82
+    );
+
+  const comma =
+    dataUrl.indexOf(',');
+
+  return {
+    mimeType: 'image/jpeg',
+    base64: dataUrl.slice(comma + 1)
+  };
+}
 
 /* =========================================================
    PLANIFICADOR
@@ -1763,19 +2359,17 @@ function plannerView() {
         new Intl.DateTimeFormat(
           'ca-ES',
           {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'short'
+            weekday: 'short'
           }
-        ).format(d)
+        ).format(d),
+      day: d.getDate()
     });
-
   }
 
   return `
     <div class="page">
 
-      <div class="section-intro">
+      <div class="toolbar">
 
         <div>
 
@@ -1784,890 +2378,967 @@ function plannerView() {
           </p>
 
           <h2>
-            Pla setmanal
+            Planificador
           </h2>
-
-          <p class="muted">
-            Consulta les tasques i les
-            sessions recomanades.
-          </p>
 
         </div>
 
+        <button
+          class="btn primary"
+          data-action="recalculate"
+        >
+          ${icon('sparkles', 17)}
+          Generar pla amb IA
+        </button>
+
       </div>
 
-      <section class="planner">
+      <div class="planner">
 
-        ${days.map(day => {
+        ${
+          days.map(
+            day => {
 
-          const taskItems =
-            state.tasks.filter(
-              task =>
-                task.dueDate ===
-                day.date
-            );
+              const dayTasks =
+                state.tasks.filter(
+                  task =>
+                    task.dueDate ===
+                      day.date &&
+                    task.status !==
+                      'completed'
+                );
 
-          const sessions =
-            state.plan?.sessions
-              ?.filter(
-                session =>
-                  session.date ===
-                  day.date
-              ) || [];
+              const sessions =
+                state.plan?.sessions
+                  ?.filter(
+                    session => {
 
-          return `
-            <div class="day-column">
+                      const base =
+                        new Date();
 
-              <div class="day-head">
-                ${day.label}
-              </div>
+                      base.setHours(
+                        12,
+                        0,
+                        0,
+                        0
+                      );
 
-              <div class="day-body">
+                      base.setDate(
+                        base.getDate() +
+                        Number(
+                          session.dayOffset ||
+                          0
+                        )
+                      );
 
-                ${
-                  taskItems
-                    .map(
-                      task => `
-                        <div class="calendar-item task-item">
-                          <strong>
-                            ${esc(task.title)}
-                          </strong>
+                      const iso =
+                        new Date(
+                          base.getTime() -
+                          base.getTimezoneOffset() *
+                          60000
+                        )
+                          .toISOString()
+                          .slice(0, 10);
 
-                          <span>
-                            ${esc(
-                              task.subject ||
-                              'General'
-                            )}
+                      return (
+                        iso ===
+                        day.date
+                      );
+                    }
+                  ) ||
+                [];
+
+              return `
+                <div class="day-column">
+
+                  <div class="day-head">
+
+                    <span>
+                      ${day.label}
+                    </span>
+
+                    <strong>
+                      ${day.day}
+                    </strong>
+
+                  </div>
+
+                  <div class="day-body">
+
+                    ${
+                      dayTasks
+                        .map(
+                          task => `
+                            <div
+                              class="calendar-item task-item"
+                            >
+
+                              <strong>
+                                ${esc(
+                                  task.title
+                                )}
+                              </strong>
+
+                              <small>
+                                ${esc(
+                                  task.subject
+                                )}
+                              </small>
+
+                            </div>
+                          `
+                        )
+                        .join('')
+                    }
+
+                    ${
+                      sessions
+                        .map(
+                          session => {
+
+                            const task =
+                              session.targetType ===
+                              'task'
+                                ? state.tasks.find(
+                                    t =>
+                                      String(t.id) ===
+                                      String(
+                                        session.targetId
+                                      )
+                                  )
+                                : null;
+
+                            const exam =
+                              session.targetType ===
+                              'exam'
+                                ? state.exams.find(
+                                    e =>
+                                      String(e.id) ===
+                                      String(
+                                        session.targetId
+                                      )
+                                  )
+                                : null;
+
+                            const title =
+                              task?.title
+                                ? `Estudi: ${task.title}`
+                                : exam?.subject
+                                  ? `Estudi: ${exam.subject}`
+                                  : 'SessiÃ³ dâ€™estudi';
+
+                            return `
+                              <div
+                                class="calendar-item ai-item"
+                              >
+
+                                <span>
+                                  ${icon(
+                                    'sparkles',
+                                    13
+                                  )}
+                                </span>
+
+                                <strong>
+                                  ${esc(title)}
+                                </strong>
+
+                                <small>
+                                  ${
+                                    Number(
+                                      session.minutes ||
+                                      0
+                                    )
+                                  } min
+                                </small>
+
+                              </div>
+                            `;
+                          }
+                        )
+                        .join('')
+                    }
+
+                    ${
+                      !dayTasks.length &&
+                      !sessions.length
+                        ? `
+                          <span class="day-empty">
+                            Lliure
                           </span>
+                        `
+                        : ''
+                    }
+
+                  </div>
+
+                </div>
+              `;
+            }
+          ).join('')
+        }
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+/* =========================================================
+   XAT IA
+   ========================================================= */
+
+function chatView() {
+
+  return `
+    <div class="page chat-page">
+
+      <section class="chat-panel">
+
+        <div class="chat-head">
+
+          <div class="assistant-avatar">
+            ${icon('sparkles', 20)}
+          </div>
+
+          <div>
+
+            <p class="eyebrow">
+              Assistent
+            </p>
+
+            <h2>
+              IA d'estudi
+            </h2>
+
+            <span>
+              Pot consultar les teves tasques
+              i exÃ mens per ajudar-te
+              a organitzar-te.
+            </span>
+
+          </div>
+
+        </div>
+
+        <div
+          id="chat-messages"
+          class="chat-messages"
+        >
+
+          ${
+            state.chat.length
+
+              ? state.chat
+                  .map(
+                    message => `
+                      <div
+                        class="message ${message.role}"
+                      >
+
+                        <div
+                          class="message-bubble"
+                        >
+                          ${chatMarkdown(
+                            message.text
+                          )}
                         </div>
-                      `
-                    )
-                    .join('')
-                }
 
-                ${
-                  sessions
-                    .map(
-                      session => `
-                        <div class="calendar-item ai-item">
-
-                          <strong>
-                            Sessió d'estudi
-                          </strong>
-
-                          <span>
-                            ${esc(
-                              session.title ||
-                              'Estudi'
-                            )}
-                          </span>
-
-                          <small>
-                            ${Number(
-                              session.minutes ||
-                              30
-                            )} min
-                          </small>
-
-                        </div>
-                      `
-                    )
-                    .join('')
-                }
-
-                ${
-                  !taskItems.length &&
-                  !sessions.length
-                    ? `
-                      <div class="day-empty">
-                        Sense activitat
                       </div>
                     `
-                    : ''
-                }
+                  )
+                  .join('')
 
-              </div>
+              : `
+                <div class="chat-empty">
 
-            </div>
-          `;
+                  <div class="assistant-avatar">
+                    ${icon(
+                      'sparkles',
+                      22
+                    )}
+                  </div>
 
-        }).join('')}
+                  <h3>
+                    Com et puc ajudar?
+                  </h3>
+
+                  <p>
+                    Pregunta'm com prioritzar
+                    les tasques, quan estudiar
+                    o com preparar els prÃ²xims
+                    exÃ mens.
+                  </p>
+
+                </div>
+              `
+          }
+
+        </div>
+
+        <form
+          id="chat-form"
+          class="chat-form"
+        >
+
+          <input
+            id="chat-input"
+            type="text"
+            autocomplete="off"
+            placeholder="Escriu la teva pregunta..."
+            required
+          >
+
+          <button
+            class="btn primary"
+            type="submit"
+          >
+            ${icon('arrow', 17)}
+          </button>
+
+        </form>
 
       </section>
 
     </div>
   `;
-
 }
 
 
 /* =========================================================
-   HORARI
+   PROGRÃ‰S
    ========================================================= */
 
-const scheduleDays = [
-  ['monday', 'Dilluns'],
-  ['tuesday', 'Dimarts'],
-  ['wednesday', 'Dimecres'],
-  ['thursday', 'Dijous'],
-  ['friday', 'Divendres']
-];
-
-const scheduleStartHour = 8;
-
-const scheduleEndHour = 20;
-
-
-function addMinutesToTime(
-  time,
-  minutes
-) {
-
-  const [
-    hours,
-    mins
-  ] =
-    String(
-      time || '08:00'
-    )
-      .split(':')
-      .map(Number);
+function progressView() {
 
   const total =
-    Math.min(
-      hours * 60 +
-      mins +
-      minutes,
-      23 * 60 + 59
+    state.tasks.length;
+
+  const done =
+    state.tasks.filter(
+      task =>
+        task.status ===
+        'completed'
+    ).length;
+
+  const planned =
+    state.tasks.reduce(
+      (sum, task) =>
+        sum +
+        Number(
+          task.minutes || 0
+        ),
+      0
     );
 
-  return `${String(
-    Math.floor(total / 60)
-  ).padStart(2, '0')}:${String(
-    total % 60
-  ).padStart(2, '0')}`;
+  const completed =
+    state.tasks
+      .filter(
+        task =>
+          task.status ===
+          'completed'
+      )
+      .reduce(
+        (sum, task) =>
+          sum +
+          Number(
+            task.minutes || 0
+          ),
+        0
+      );
 
-}
-
-
-function scheduleTimeToMinutes(
-  time
-) {
-
-  const [
-    hours,
-    minutes
-  ] =
-    String(
-      time || '00:00'
-    )
-      .split(':')
-      .map(Number);
-
-  return (
-    hours * 60 +
-    minutes
-  );
-
-}
-
-
-function scheduleView() {
-
-  const events =
-    Array.isArray(
-      state.scheduleEvents
-    )
-      ? state.scheduleEvents
-      : [];
-
-  const hours =
-    Array.from(
-      {
-        length:
-          scheduleEndHour -
-          scheduleStartHour
-      },
-      (_, index) =>
-        scheduleStartHour +
-        index
-    );
+  const percent =
+    total
+      ? Math.round(
+          done /
+          total *
+          100
+        )
+      : 0;
 
   return `
-    <div class="page schedule-page">
+    <div class="page">
 
-      <div class="schedule-intro">
+      <div class="toolbar">
 
         <div>
 
           <p class="eyebrow">
-            Horari setmanal
+            Seguiment
           </p>
 
           <h2>
-            El meu horari
+            ProgrÃ©s
           </h2>
 
+        </div>
+
+        <button
+          class="btn secondary"
+          data-action="export"
+        >
+          ${icon('download', 16)}
+          Exportar dades
+        </button>
+
+      </div>
+
+      <div class="progress-grid">
+
+        ${statCard(
+          'Tasques completades',
+          `${done}/${total}`,
+          `${percent}% del total`,
+          'check'
+        )}
+
+        ${statCard(
+          'Minuts planificats',
+          planned,
+          'Temps estimat de les tasques',
+          'clock'
+        )}
+
+        ${statCard(
+          'Minuts completats',
+          completed,
+          'Temps de tasques finalitzades',
+          'progress'
+        )}
+
+      </div>
+
+      <section class="panel">
+
+        <div class="panel-head">
+
+          <div>
+
+            <p class="eyebrow">
+              Resum
+            </p>
+
+            <h2>
+              Activitat acadÃ¨mica
+            </h2>
+
+          </div>
+
+        </div>
+
+        <div class="progress-bar">
+
+          <span
+            style="width:${percent}%"
+          ></span>
+
+        </div>
+
+        <p class="muted">
+          ${percent}% de les tasques
+          registrades estan completades.
+        </p>
+
+      </section>
+
+    </div>
+  `;
+}
+
+
+/* =========================================================
+   AVALUACIÃ“
+   ========================================================= */
+
+function settingsView() {
+
+  const email =
+    currentUser?.email ||
+    'Usuari';
+
+  return `
+    <div class="page">
+
+      <div class="toolbar">
+
+        <div>
+
+          <p class="eyebrow">
+            Compte
+          </p>
+
+          <h2>
+            AvaluaciÃ³
+          </h2>
+
+        </div>
+
+      </div>
+
+      <div class="settings-grid">
+
+        <section class="panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <p class="eyebrow">
+                SessiÃ³ actual
+              </p>
+
+              <h2>
+                Compte
+              </h2>
+
+            </div>
+
+          </div>
+
+          <div class="setting-row">
+
+            <span>
+              Correu electrÃ²nic
+            </span>
+
+            <strong>
+              ${esc(email)}
+            </strong>
+
+          </div>
+
+          <div class="setting-row">
+
+            <span>
+              Tasques
+            </span>
+
+            <strong>
+              ${state.tasks.length}
+            </strong>
+
+          </div>
+
+          <div class="setting-row">
+
+            <span>
+              ExÃ mens
+            </span>
+
+            <strong>
+              ${state.exams.length}
+            </strong>
+
+          </div>
+
+          <div class="setting-row">
+
+            <span>
+              Missatges d'IA
+            </span>
+
+            <strong>
+              ${state.chat.length}
+            </strong>
+
+          </div>
+
+        </section>
+
+        <section class="panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <p class="eyebrow">
+                Dades
+              </p>
+
+              <h2>
+                Control de dades
+              </h2>
+
+            </div>
+
+          </div>
+
+          <div class="button-stack">
+
+            <button
+              class="btn secondary"
+              data-action="export"
+            >
+              ${icon('download', 16)}
+              Exportar dades JSON
+            </button>
+
+            <button
+              class="btn danger-solid"
+              data-action="reset"
+            >
+              ${icon('trash', 16)}
+              Restablir dades
+            </button>
+
+            <button
+              class="btn ghost"
+              data-action="logout"
+            >
+              Tancar sessiÃ³
+            </button>
+
+          </div>
+
+        </section>
+
+      </div>
+
+    </div>
+  `;
+}
+
+
+/* =========================================================
+   RENDER
+   ========================================================= */
+
+function render() {
+
+  const root =
+    document.querySelector(
+      '#root'
+    );
+
+  if (!root) {
+    return;
+  }
+
+  if (!authReady) {
+
+    root.innerHTML = `
+      <div class="auth-screen">
+
+        <div class="auth-card">
+
+          <div class="auth-brand">
+
+            <div class="auth-mark">
+              ${icon(
+                'sparkles',
+                24
+              )}
+            </div>
+
+            <div>
+              <strong>TRIA</strong>
+              <span>
+                Fet per Freddy Figueroa
+              </span>
+            </div>
+
+          </div>
+
           <p class="muted">
-            Guarda les teves classes i reserva
-            les hores que ja tens ocupades.
+            Carregant...
           </p>
 
         </div>
 
-        <div class="schedule-tip">
-
-          <span>
-            ${icon('calendar', 15)}
-          </span>
-
-          <span>
-            Després TRIA podrà tenir en compte
-            aquestes hores per organitzar
-            el teu estudi.
-          </span>
-
-        </div>
-
       </div>
-
-      <section class="panel schedule-panel">
-
-        <div class="schedule-grid">
-
-          <div class="schedule-corner"></div>
-
-          ${scheduleDays.map(
-            ([day, label]) => `
-              <div class="schedule-day-head">
-                ${label}
-              </div>
-            `
-          ).join('')}
-
-          ${hours.map(
-            hour => `
-
-              <div class="schedule-time">
-                ${String(hour).padStart(
-                  2,
-                  '0'
-                )}:00
-              </div>
-
-              ${scheduleDays.map(
-                ([day]) => {
-
-                  const slotEvents =
-                    events.filter(
-                      item => {
-
-                        if (
-                          item.day !==
-                          day
-                        ) {
-                          return false;
-                        }
-
-                        const start =
-                          scheduleTimeToMinutes(
-                            item.startTime
-                          );
-
-                        const end =
-                          scheduleTimeToMinutes(
-                            item.endTime
-                          );
-
-                        return (
-                          start <
-                            (hour + 1) *
-                            60 &&
-                          end >
-                            hour * 60
-                        );
-
-                      }
-                    );
-
-                  return `
-                    <div
-                      class="schedule-slot"
-                      data-action="new-schedule-event"
-                      data-day="${day}"
-                      data-time="${String(
-                        hour
-                      ).padStart(
-                        2,
-                        '0'
-                      )}:00"
-                    >
-
-                      ${
-                        slotEvents
-                          .map(
-                            item => `
-                              <button
-                                type="button"
-                                class="schedule-event type-${esc(
-                                  item.type ||
-                                  'class'
-                                )}"
-                                data-action="edit-schedule-event"
-                                data-id="${esc(
-                                  item.id
-                                )}"
-                              >
-
-                                <strong>
-                                  ${esc(
-                                    item.title
-                                  )}
-                                </strong>
-
-                                ${
-                                  item.subject
-                                    ? `
-                                      <span>
-                                        ${esc(
-                                          item.subject
-                                        )}
-                                      </span>
-                                    `
-                                    : ''
-                                }
-
-                                <small>
-                                  ${esc(
-                                    item.startTime
-                                  )}–${esc(
-                                    item.endTime
-                                  )}
-                                </small>
-
-                              </button>
-                            `
-                          )
-                          .join('')
-                      }
-
-                    </div>
-                  `;
-
-                }
-              ).join('')}
-
-            `
-          ).join('')}
-
-        </div>
-
-      </section>
-
-      <div class="schedule-legend">
-
-        <span>
-          <i class="legend-dot class"></i>
-          Classe
-        </span>
-
-        <span>
-          <i class="legend-dot study"></i>
-          Estudi
-        </span>
-
-        <span>
-          <i class="legend-dot exam"></i>
-          Examen
-        </span>
-
-        <span>
-          <i class="legend-dot personal"></i>
-          Personal
-        </span>
-
-      </div>
-
-    </div>
-  `;
-
-}
-
-
-/* =========================================================
-   HORARI · CRUD
-   ========================================================= */
-
-function openScheduleEventModal(
-  id = null,
-  presetDay = '',
-  presetTime = ''
-) {
-
-  modalMode =
-    'schedule-event';
-
-  editingId = id;
-
-  const item =
-    id
-      ? (
-          state.scheduleEvents ||
-          []
-        ).find(
-          event =>
-            event.id === id
-        )
-      : null;
-
-  const modal =
-    document.querySelector(
-      '#modal'
-    );
-
-  const form =
-    document.querySelector(
-      '#modal-form'
-    );
-
-  const day =
-    item?.day ||
-    presetDay ||
-    'monday';
-
-  const startTime =
-    item?.startTime ||
-    presetTime ||
-    '08:00';
-
-  const endTime =
-    item?.endTime ||
-    addMinutesToTime(
-      startTime,
-      60
-    );
-
-  document.querySelector(
-    '#modal-eyebrow'
-  ).textContent =
-    'HORARI';
-
-  document.querySelector(
-    '#modal-title'
-  ).textContent =
-    item
-      ? 'Editar esdeveniment'
-      : 'Nou esdeveniment';
-
-  form.innerHTML = `
-
-    <div class="form-grid">
-
-      <label>
-
-        Títol
-
-        <input
-          name="title"
-          required
-          value="${esc(
-            item?.title ||
-            ''
-          )}"
-          placeholder="Ex. Matemàtiques"
-        >
-
-      </label>
-
-      <label>
-
-        Assignatura
-
-        <input
-          name="subject"
-          value="${esc(
-            item?.subject ||
-            ''
-          )}"
-          placeholder="Ex. Matemàtiques"
-        >
-
-      </label>
-
-      <label>
-
-        Tipus
-
-        <select
-          name="type"
-        >
-
-          <option
-            value="class"
-            ${
-              item?.type ===
-                'class' ||
-              !item
-                ? 'selected'
-                : ''
-            }
-          >
-            Classe
-          </option>
-
-          <option
-            value="study"
-            ${
-              item?.type ===
-              'study'
-                ? 'selected'
-                : ''
-            }
-          >
-            Estudi
-          </option>
-
-          <option
-            value="exam"
-            ${
-              item?.type ===
-              'exam'
-                ? 'selected'
-                : ''
-            }
-          >
-            Examen
-          </option>
-
-          <option
-            value="personal"
-            ${
-              item?.type ===
-              'personal'
-                ? 'selected'
-                : ''
-            }
-          >
-            Personal
-          </option>
-
-        </select>
-
-      </label>
-
-      <label>
-
-        Dia
-
-        <select
-          name="day"
-        >
-
-          ${scheduleDays.map(
-            ([value, label]) => `
-
-              <option
-                value="${value}"
-                ${
-                  day === value
-                    ? 'selected'
-                    : ''
-                }
-              >
-                ${label}
-              </option>
-
-            `
-          ).join('')}
-
-        </select>
-
-      </label>
-
-      <label>
-
-        Hora d'inici
-
-        <input
-          name="startTime"
-          type="time"
-          required
-          value="${esc(
-            startTime
-          )}"
-        >
-
-      </label>
-
-      <label>
-
-        Hora de finalització
-
-        <input
-          name="endTime"
-          type="time"
-          required
-          value="${esc(
-            endTime
-          )}"
-        >
-
-      </label>
-
-      <label class="full">
-
-        Notes
-
-        <textarea
-          name="notes"
-          rows="3"
-          placeholder="Informació opcional"
-        >${esc(
-          item?.notes ||
-          ''
-        )}</textarea>
-
-      </label>
-
-    </div>
-
-    <div class="modal-actions">
-
-      ${
-        item
-          ? `
-            <button
-              type="button"
-              class="btn ghost danger-btn"
-              data-action="delete-schedule-event"
-              data-id="${esc(
-                item.id
-              )}"
-            >
-              ${icon(
-                'trash',
-                15
-              )}
-              Eliminar
-            </button>
-          `
-          : ''
-      }
-
-      <div class="modal-actions-right">
-
-        <button
-          type="button"
-          class="btn secondary"
-          data-action="close-modal"
-        >
-          Cancel·lar
-        </button>
-
-        <button
-          type="submit"
-          class="btn primary"
-        >
-          Guardar esdeveniment
-        </button>
-
-      </div>
-
-    </div>
-
-  `;
-
-  form.onsubmit =
-    saveScheduleEventFromForm;
-
-  modal.classList.remove(
-    'hidden'
-  );
-
-}
-
-
-function saveScheduleEventFromForm(
-  event
-) {
-
-  event.preventDefault();
-
-  const data =
-    new FormData(
-      event.currentTarget
-    );
-
-  const title =
-    String(
-      data.get('title') ||
-      ''
-    ).trim();
-
-  const startTime =
-    String(
-      data.get('startTime') ||
-      ''
-    );
-
-  const endTime =
-    String(
-      data.get('endTime') ||
-      ''
-    );
-
-  if (!title) {
-
-    alert(
-      'Escriu un títol per a l’esdeveniment.'
-    );
+    `;
 
     return;
   }
 
-  if (
-    !startTime ||
-    !endTime ||
-    startTime >= endTime
-  ) {
+  if (!currentUser) {
 
-    alert(
-      'L’hora de finalització ha de ser posterior a l’hora d’inici.'
-    );
+    root.innerHTML =
+      authView();
+
+    bindAuthEvents();
 
     return;
   }
 
-  if (
-    !Array.isArray(
-      state.scheduleEvents
-    )
-  ) {
+  root.innerHTML =
+    layout();
 
-    state.scheduleEvents =
-      [];
+  const content =
+    document.querySelector(
+      '#content'
+    );
 
-  }
+  const views = {
 
-  const item = {
+    dashboard:
+      dashboardView,
 
-    id:
-      editingId ||
-      uid('schedule'),
+    tasks:
+      tasksView,
 
-    title,
+    exams:
+      examsView,
 
-    subject:
-      String(
-        data.get('subject') ||
-        ''
-      ).trim(),
+    schedule:
+      scheduleView,
 
-    type:
-      String(
-        data.get('type') ||
-        'class'
-      ),
+    planner:
+      plannerView,
 
-    day:
-      String(
-        data.get('day') ||
-        'monday'
-      ),
+    chat:
+      chatView,
 
-    startTime,
+    progress:
+      progressView,
 
-    endTime,
-
-    notes:
-      String(
-        data.get('notes') ||
-        ''
-      ).trim()
+    settings:
+      settingsView
 
   };
 
-  if (editingId) {
+  content.innerHTML =
+    (
+      views[currentPage] ||
+      dashboardView
+    )();
 
-    state.scheduleEvents =
-      state.scheduleEvents.map(
-        eventItem =>
-          eventItem.id ===
-          editingId
-            ? item
-            : eventItem
+  bindEvents();
+
+  if (currentPage === 'chat') {
+
+    const box =
+      document.querySelector(
+        '#chat-messages'
       );
 
-  } else {
-
-    state.scheduleEvents.push(
-      item
-    );
-
+    if (box) {
+      box.scrollTop =
+        box.scrollHeight;
+    }
   }
-
-  state.scheduleEvents.sort(
-    (a, b) =>
-      scheduleDays.findIndex(
-        ([day]) =>
-          day === a.day
-      ) -
-      scheduleDays.findIndex(
-        ([day]) =>
-          day === b.day
-      ) ||
-      a.startTime.localeCompare(
-        b.startTime
-      )
-  );
-
-  saveState();
-
-  closeModal();
-
-  currentPage =
-    'schedule';
-
-  render();
-
-}
-
-
-function deleteScheduleEvent(
-  id
-) {
-
-  if (
-    !confirm(
-      'Vols eliminar aquest esdeveniment?'
-    )
-  ) {
-    return;
-  }
-
-  state.scheduleEvents =
-    (
-      state.scheduleEvents ||
-      []
-    ).filter(
-      item =>
-        item.id !== id
-    );
-
-  saveState();
-
-  closeModal();
-
-  currentPage =
-    'schedule';
-
-  render();
-
 }
 
 
 /* =========================================================
-   TASQUES · CRUD
+   EVENTS
+   ========================================================= */
+
+function bindEvents() {
+
+  document
+    .querySelectorAll(
+      '[data-page]'
+    )
+    .forEach(button => {
+
+      button.addEventListener(
+        'click',
+        () => {
+
+          currentPage =
+            button.dataset.page;
+
+          render();
+
+        }
+      );
+
+    });
+
+  document
+    .querySelectorAll(
+      '[data-action]'
+    )
+    .forEach(button => {
+
+      button.addEventListener(
+        'click',
+        handleAction
+      );
+
+    });
+
+  const chatForm =
+    document.querySelector(
+      '#chat-form'
+    );
+
+  if (chatForm) {
+
+    chatForm.addEventListener(
+      'submit',
+      sendChat
+    );
+
+  }
+
+  const scheduleImageInput =
+    document.querySelector(
+      '#schedule-image-input'
+    );
+
+  if (scheduleImageInput) {
+
+    scheduleImageInput.addEventListener(
+      'change',
+      handleScheduleImage
+    );
+
+  }
+}
+
+
+async function handleAction(event) {
+
+  const action =
+    event.currentTarget.dataset.action;
+
+  const id =
+    event.currentTarget.dataset.id;
+
+  if (
+    action ===
+    'toggle-auth'
+  ) {
+    toggleAuthMode();
+    return;
+  }
+
+  if (
+    action ===
+    'logout'
+  ) {
+    await logout();
+    return;
+  }
+
+  if (
+    action ===
+    'new-task'
+  ) {
+    openTaskModal();
+    return;
+  }
+
+  if (
+    action ===
+    'edit-task'
+  ) {
+    openTaskModal(id);
+    return;
+  }
+
+  if (
+    action ===
+    'delete-task'
+  ) {
+    deleteTask(id);
+    return;
+  }
+
+  if (
+    action ===
+    'toggle-task'
+  ) {
+    toggleTask(id);
+    return;
+  }
+
+  if (
+    action ===
+    'scan-schedule'
+  ) {
+    document
+      .querySelector('#schedule-image-input')
+      ?.click();
+    return;
+  }
+
+  if (
+    action ===
+    'new-schedule-event'
+  ) {
+    openScheduleEventModal();
+    return;
+  }
+
+  if (
+    action ===
+    'edit-schedule-event'
+  ) {
+    openScheduleEventModal(id);
+    return;
+  }
+
+  if (
+    action ===
+    'delete-schedule-event'
+  ) {
+    deleteScheduleEvent(id);
+    return;
+  }
+
+  if (
+    action ===
+    'new-exam'
+  ) {
+    openExamModal();
+    return;
+  }
+
+  if (
+    action ===
+    'edit-exam'
+  ) {
+    openExamModal(id);
+    return;
+  }
+
+  if (
+    action ===
+    'delete-exam'
+  ) {
+    deleteExam(id);
+    return;
+  }
+
+  if (
+    action ===
+    'close-modal'
+  ) {
+    closeModal();
+    return;
+  }
+
+  if (
+    action ===
+    'recalculate'
+  ) {
+    await generatePlan();
+    return;
+  }
+
+  if (
+    action ===
+    'export'
+  ) {
+    exportData();
+    return;
+  }
+
+  if (
+    action ===
+    'reset'
+  ) {
+    resetData();
+  }
+}
+
+
+/* =========================================================
+   TASQUES Â· CRUD
    ========================================================= */
 
 function openTaskModal(
@@ -2713,16 +3384,15 @@ function openTaskModal(
 
       <label>
 
-        Títol
+        TÃ­tol
 
         <input
           name="title"
           required
           value="${esc(
-            task?.title ||
-            ''
+            task?.title || ''
           )}"
-          placeholder="Ex. Preparar presentació"
+          placeholder="Ex. Preparar presentaciÃ³"
         >
 
       </label>
@@ -2734,32 +3404,30 @@ function openTaskModal(
         <input
           name="subject"
           value="${esc(
-            task?.subject ||
-            ''
+            task?.subject || ''
           )}"
-          placeholder="Ex. Història"
+          placeholder="Ex. HistÃ²ria"
         >
 
       </label>
 
       <label class="full">
 
-        Descripció
+        DescripciÃ³
 
         <textarea
           name="description"
           rows="3"
-          placeholder="Què has de fer?"
+          placeholder="QuÃ¨ has de fer?"
         >${esc(
-          task?.description ||
-          ''
+          task?.description || ''
         )}</textarea>
 
       </label>
 
       <label>
 
-        Data límit
+        Data lÃ­mit
 
         <input
           name="dueDate"
@@ -2783,8 +3451,7 @@ function openTaskModal(
           min="5"
           step="5"
           value="${Number(
-            task?.minutes ||
-            30
+            task?.minutes || 30
           )}"
         >
 
@@ -2813,10 +3480,8 @@ function openTaskModal(
                         : ''
                     }
                   >
-                    ${n} ·
-                    ${difficultyLabel(
-                      n
-                    )}
+                    ${n} Â·
+                    ${difficultyLabel(n)}
                   </option>
                 `
               )
@@ -2835,42 +3500,33 @@ function openTaskModal(
           name="status"
         >
 
-          <option
-            value="pending"
-            ${
-              task?.status ===
-                'pending' ||
-              !task
-                ? 'selected'
-                : ''
-            }
-          >
-            Pendent
-          </option>
-
-          <option
-            value="inprogress"
-            ${
-              task?.status ===
-              'inprogress'
-                ? 'selected'
-                : ''
-            }
-          >
-            En curs
-          </option>
-
-          <option
-            value="completed"
-            ${
-              task?.status ===
+          ${
+            [
+              'pending',
+              'inprogress',
               'completed'
-                ? 'selected'
-                : ''
-            }
-          >
-            Completada
-          </option>
+            ]
+              .map(
+                status => `
+                  <option
+                    value="${status}"
+                    ${
+                      (
+                        task?.status ||
+                        'pending'
+                      ) === status
+                        ? 'selected'
+                        : ''
+                    }
+                  >
+                    ${statusLabel(
+                      status
+                    )}
+                  </option>
+                `
+              )
+              .join('')
+          }
 
         </select>
 
@@ -2885,7 +3541,7 @@ function openTaskModal(
         class="btn secondary"
         data-action="close-modal"
       >
-        Cancel·lar
+        CancelÂ·lar
       </button>
 
       <button
@@ -2896,7 +3552,6 @@ function openTaskModal(
       </button>
 
     </div>
-
   `;
 
   form.onsubmit =
@@ -2905,7 +3560,6 @@ function openTaskModal(
   modal.classList.remove(
     'hidden'
   );
-
 }
 
 
@@ -2928,23 +3582,18 @@ function saveTaskFromForm(
 
     title:
       String(
-        data.get('title') ||
-        ''
+        data.get('title') || ''
       ).trim(),
 
     subject:
       String(
-        data.get('subject') ||
-        ''
+        data.get('subject') || ''
       ).trim() ||
       'General',
 
     description:
       String(
-        data.get(
-          'description'
-        ) ||
-        ''
+        data.get('description') || ''
       ).trim(),
 
     dueDate:
@@ -2957,15 +3606,12 @@ function saveTaskFromForm(
 
     difficulty:
       Number(
-        data.get(
-          'difficulty'
-        )
+        data.get('difficulty')
       ) || 3,
 
     status:
       data.get('status') ||
       'pending'
-
   };
 
   if (editingId) {
@@ -2973,17 +3619,14 @@ function saveTaskFromForm(
     state.tasks =
       state.tasks.map(
         task =>
-          task.id ===
-          editingId
+          task.id === editingId
             ? item
             : task
       );
 
   } else {
 
-    state.tasks.push(
-      item
-    );
+    state.tasks.push(item);
 
   }
 
@@ -2992,7 +3635,6 @@ function saveTaskFromForm(
   closeModal();
 
   render();
-
 }
 
 
@@ -3015,7 +3657,6 @@ function deleteTask(id) {
   saveState();
 
   render();
-
 }
 
 
@@ -3039,19 +3680,17 @@ function toggleTask(id) {
               ? 'pending'
               : 'completed'
         };
-
       }
     );
 
   saveState();
 
   render();
-
 }
 
 
 /* =========================================================
-   EXÀMENS · CRUD
+   EXÃ€MENS Â· CRUD
    ========================================================= */
 
 function openExamModal(
@@ -3082,7 +3721,7 @@ function openExamModal(
   document.querySelector(
     '#modal-eyebrow'
   ).textContent =
-    'EXÀMENS';
+    'EXÃ€MENS';
 
   document.querySelector(
     '#modal-title'
@@ -3103,10 +3742,9 @@ function openExamModal(
           name="subject"
           required
           value="${esc(
-            exam?.subject ||
-            ''
+            exam?.subject || ''
           )}"
-          placeholder="Ex. Matemàtiques"
+          placeholder="Ex. MatemÃ tiques"
         >
 
       </label>
@@ -3136,8 +3774,7 @@ function openExamModal(
           rows="3"
           placeholder="Temes que entren a l'examen"
         >${esc(
-          exam?.syllabus ||
-          ''
+          exam?.syllabus || ''
         )}</textarea>
 
       </label>
@@ -3165,10 +3802,8 @@ function openExamModal(
                         : ''
                     }
                   >
-                    ${n} ·
-                    ${difficultyLabel(
-                      n
-                    )}
+                    ${n} Â·
+                    ${difficultyLabel(n)}
                   </option>
                 `
               )
@@ -3205,7 +3840,7 @@ function openExamModal(
         class="btn secondary"
         data-action="close-modal"
       >
-        Cancel·lar
+        CancelÂ·lar
       </button>
 
       <button
@@ -3216,7 +3851,6 @@ function openExamModal(
       </button>
 
     </div>
-
   `;
 
   form.onsubmit =
@@ -3225,7 +3859,6 @@ function openExamModal(
   modal.classList.remove(
     'hidden'
   );
-
 }
 
 
@@ -3280,17 +3913,14 @@ function saveExamFromForm(
     state.exams =
       state.exams.map(
         exam =>
-          exam.id ===
-          editingId
+          exam.id === editingId
             ? item
             : exam
       );
 
   } else {
 
-    state.exams.push(
-      item
-    );
+    state.exams.push(item);
 
   }
 
@@ -3299,7 +3929,6 @@ function saveExamFromForm(
   closeModal();
 
   render();
-
 }
 
 
@@ -3322,7 +3951,6 @@ function deleteExam(id) {
   saveState();
 
   render();
-
 }
 
 
@@ -3344,12 +3972,11 @@ function closeModal() {
   modalMode = null;
 
   editingId = null;
-
 }
 
 
 /* =========================================================
-   IA · PLA D'ESTUDI
+   IA Â· PLA D'ESTUDI
    ========================================================= */
 
 async function generatePlan() {
@@ -3394,7 +4021,10 @@ async function generatePlan() {
                 state.tasks,
 
               exams:
-                state.exams
+                state.exams,
+
+              scheduleEvents:
+                state.scheduleEvents
             })
         }
       );
@@ -3406,7 +4036,7 @@ async function generatePlan() {
 
       throw new Error(
         data.error ||
-        'No s’ha pogut generar el pla.'
+        'No sâ€™ha pogut generar el pla.'
       );
 
     }
@@ -3426,9 +4056,7 @@ async function generatePlan() {
                 'task' &&
               !state.tasks.some(
                 task =>
-                  String(
-                    task.id
-                  ) ===
+                  String(task.id) ===
                   String(
                     session.targetId
                   )
@@ -3442,9 +4070,7 @@ async function generatePlan() {
                 'exam' &&
               !state.exams.some(
                 exam =>
-                  String(
-                    exam.id
-                  ) ===
+                  String(exam.id) ===
                   String(
                     session.targetId
                   )
@@ -3454,159 +4080,57 @@ async function generatePlan() {
             }
 
             return true;
-
           }
         );
 
     }
 
-    state.plan = data;
+    state.plan =
+      data;
 
     saveState();
+
+    alert(
+      'Pla actualitzat correctament.'
+    );
+
+    render();
 
   } catch (error) {
 
     alert(
-      error.message
+      `No sâ€™ha pogut generar el pla: ${error.message}`
     );
 
+    buttons.forEach(
+      button => {
+
+        button.disabled =
+          false;
+
+        button.innerHTML =
+          `${icon(
+            'sparkles',
+            17
+          )} Recalcular amb IA`;
+
+      }
+    );
   }
-
-  render();
-
 }
 
 
 /* =========================================================
-   IA · XAT
+   IA Â· XAT
    ========================================================= */
-
-function chatView() {
-
-  return `
-    <div class="page">
-
-      <div class="section-intro">
-
-        <div>
-
-          <p class="eyebrow">
-            Assistent
-          </p>
-
-          <h2>
-            Parla amb la IA
-          </h2>
-
-          <p class="muted">
-            Pregunta sobre les teves tasques,
-            exàmens i organització.
-          </p>
-
-        </div>
-
-      </div>
-
-      <section class="chat-panel">
-
-        <div
-          id="chat-messages"
-          class="chat-messages"
-        >
-
-          ${
-            state.chat.length
-              ? state.chat
-                  .map(
-                    message => `
-                      <div
-                        class="chat-message ${
-                          message.role ===
-                          'user'
-                            ? 'user'
-                            : 'assistant'
-                        }"
-                      >
-                        <div class="chat-bubble">
-                          ${
-                            message.role ===
-                            'assistant'
-                              ? chatMarkdown(
-                                  message.text
-                                )
-                              : esc(
-                                  message.text
-                                )
-                          }
-                        </div>
-                      </div>
-                    `
-                  )
-                  .join('')
-              : `
-                <div class="chat-empty">
-
-                  <div class="ai-badge">
-                    ${icon(
-                      'sparkles',
-                      15
-                    )}
-                    IA
-                  </div>
-
-                  <h3>
-                    Com et puc ajudar?
-                  </h3>
-
-                  <p>
-                    Pots preguntar-me com
-                    prioritzar les tasques,
-                    quan estudiar o com
-                    organitzar la setmana.
-                  </p>
-
-                </div>
-              `
-          }
-
-        </div>
-
-        <form
-          id="chat-form"
-          class="chat-input"
-        >
-
-          <input
-            name="message"
-            autocomplete="off"
-            placeholder="Escriu una pregunta..."
-            required
-          >
-
-          <button
-            type="submit"
-            class="btn primary"
-          >
-            Enviar
-          </button>
-
-        </form>
-
-      </section>
-
-    </div>
-  `;
-
-}
-
 
 async function sendChat(event) {
 
   event.preventDefault();
 
   const input =
-    event.currentTarget.querySelector(
-      'input[name="message"]'
+    document.querySelector(
+      '#chat-input'
     );
 
   const message =
@@ -3642,11 +4166,15 @@ async function sendChat(event) {
 
           body:
             JSON.stringify({
+
               message,
+
               tasks:
                 state.tasks,
+
               exams:
                 state.exams
+
             })
         }
       );
@@ -3691,634 +4219,6 @@ async function sendChat(event) {
   saveState();
 
   render();
-
-}
-
-
-/* =========================================================
-   PROGRÉS
-   ========================================================= */
-
-function progressView() {
-
-  const completed =
-    state.tasks.filter(
-      task =>
-        task.status ===
-        'completed'
-    );
-
-  const pending =
-    state.tasks.filter(
-      task =>
-        task.status !==
-        'completed'
-    );
-
-  const totalMinutes =
-    state.tasks.reduce(
-      (sum, task) =>
-        sum +
-        Number(
-          task.minutes || 0
-        ),
-      0
-    );
-
-  const completedMinutes =
-    completed.reduce(
-      (sum, task) =>
-        sum +
-        Number(
-          task.minutes || 0
-        ),
-      0
-    );
-
-  const percent =
-    state.tasks.length
-      ? Math.round(
-          completed.length /
-          state.tasks.length *
-          100
-        )
-      : 0;
-
-  return `
-    <div class="page">
-
-      <div class="section-intro">
-
-        <div>
-
-          <p class="eyebrow">
-            Seguiment
-          </p>
-
-          <h2>
-            El meu progrés
-          </h2>
-
-          <p class="muted">
-            Mira com avances amb les tasques
-            i el temps planificat.
-          </p>
-
-        </div>
-
-      </div>
-
-      <div class="stats-grid">
-
-        ${statCard(
-          'Completades',
-          completed.length,
-          `${pending.length} pendents`,
-          'check'
-        )}
-
-        ${statCard(
-          'Progrés',
-          `${percent}%`,
-          'Tasques completades',
-          'progress'
-        )}
-
-        ${statCard(
-          'Temps completat',
-          `${completedMinutes} min`,
-          'Segons les tasques',
-          'clock'
-        )}
-
-        ${statCard(
-          'Temps total',
-          `${totalMinutes} min`,
-          'Temps estimat',
-          'clock'
-        )}
-
-      </div>
-
-      <section class="panel">
-
-        <div class="panel-head">
-
-          <div>
-
-            <p class="eyebrow">
-              Resum
-            </p>
-
-            <h2>
-              Activitat
-            </h2>
-
-          </div>
-
-        </div>
-
-        <div class="progress-bar">
-
-          <div
-            class="progress-fill"
-            style="width:${percent}%"
-          ></div>
-
-        </div>
-
-        <p class="muted">
-          Has completat
-          ${completed.length}
-          de
-          ${state.tasks.length}
-          tasques.
-        </p>
-
-      </section>
-
-    </div>
-  `;
-
-}
-
-
-/* =========================================================
-   AVALUACIÓ / AJUSTOS
-   ========================================================= */
-
-function settingsView() {
-
-  return `
-    <div class="page">
-
-      <div class="section-intro">
-
-        <div>
-
-          <p class="eyebrow">
-            Transparència
-          </p>
-
-          <h2>
-            Avaluació i ajustos
-          </h2>
-
-          <p class="muted">
-            Gestiona les dades locals de TRIA
-            i revisa el funcionament de l'aplicació.
-          </p>
-
-        </div>
-
-      </div>
-
-      <section class="panel">
-
-        <div class="panel-head">
-
-          <div>
-
-            <p class="eyebrow">
-              Dades
-            </p>
-
-            <h2>
-              Les teves dades
-            </h2>
-
-          </div>
-
-        </div>
-
-        <p class="muted">
-          Pots exportar les dades actuals
-          o eliminar-les d'aquest navegador.
-        </p>
-
-        <div class="settings-actions">
-
-          <button
-            class="btn secondary"
-            data-action="export"
-          >
-            ${icon(
-              'download',
-              16
-            )}
-            Exportar dades
-          </button>
-
-          <button
-            class="btn danger-btn"
-            data-action="reset"
-          >
-            ${icon(
-              'trash',
-              16
-            )}
-            Eliminar dades
-          </button>
-
-        </div>
-
-      </section>
-
-      <section class="panel">
-
-        <div class="panel-head">
-
-          <div>
-
-            <p class="eyebrow">
-              Privacitat
-            </p>
-
-            <h2>
-              Com funciona
-            </h2>
-
-          </div>
-
-        </div>
-
-        <p class="muted">
-          TRIA utilitza les dades acadèmiques
-          que introdueixes per organitzar
-          tasques, exàmens i recomanacions.
-        </p>
-
-      </section>
-
-    </div>
-  `;
-
-}
-
-
-/* =========================================================
-   RENDER
-   ========================================================= */
-
-function render() {
-
-  const root =
-    document.querySelector(
-      '#root'
-    );
-
-  if (!root) {
-    return;
-  }
-
-  if (!authReady) {
-
-    root.innerHTML = `
-      <div class="loading-screen">
-        <div class="loading-spinner"></div>
-        <p>Carregant TRIA...</p>
-      </div>
-    `;
-
-    return;
-
-  }
-
-  if (!currentUser) {
-
-    root.innerHTML =
-      authView();
-
-    bindAuthEvents();
-
-    return;
-
-  }
-
-  root.innerHTML =
-    layout();
-
-  const content =
-    document.querySelector(
-      '#content'
-    );
-
-  const views = {
-
-    dashboard:
-      dashboardView,
-
-    tasks:
-      tasksView,
-
-    exams:
-      examsView,
-
-    planner:
-      plannerView,
-
-    schedule:
-      scheduleView,
-
-    chat:
-      chatView,
-
-    progress:
-      progressView,
-
-    settings:
-      settingsView
-
-  };
-
-  content.innerHTML =
-    (
-      views[currentPage] ||
-      dashboardView
-    )();
-
-  bindEvents();
-
-  if (
-    currentPage ===
-    'chat'
-  ) {
-
-    const box =
-      document.querySelector(
-        '#chat-messages'
-      );
-
-    if (box) {
-
-      box.scrollTop =
-        box.scrollHeight;
-
-    }
-
-  }
-
-}
-
-
-/* =========================================================
-   EVENTS
-   ========================================================= */
-
-function bindEvents() {
-
-  document
-    .querySelectorAll(
-      '[data-page]'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          () => {
-
-            currentPage =
-              button.dataset.page;
-
-            render();
-
-          }
-        );
-
-      }
-    );
-
-  document
-    .querySelectorAll(
-      '[data-action]'
-    )
-    .forEach(
-      button => {
-
-        button.addEventListener(
-          'click',
-          handleAction
-        );
-
-      }
-    );
-
-  const chatForm =
-    document.querySelector(
-      '#chat-form'
-    );
-
-  if (chatForm) {
-
-    chatForm.addEventListener(
-      'submit',
-      sendChat
-    );
-
-  }
-
-}
-
-
-async function handleAction(
-  event
-) {
-
-  const action =
-    event.currentTarget.dataset.action;
-
-  const id =
-    event.currentTarget.dataset.id;
-
-  if (
-    action ===
-    'toggle-auth'
-  ) {
-
-    toggleAuthMode();
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'logout'
-  ) {
-
-    await logout();
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'new-task'
-  ) {
-
-    openTaskModal();
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'edit-task'
-  ) {
-
-    openTaskModal(id);
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'delete-task'
-  ) {
-
-    deleteTask(id);
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'toggle-task'
-  ) {
-
-    toggleTask(id);
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'new-exam'
-  ) {
-
-    openExamModal();
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'new-schedule-event'
-  ) {
-
-    openScheduleEventModal(
-      null,
-      event.currentTarget.dataset.day ||
-        '',
-      event.currentTarget.dataset.time ||
-        ''
-    );
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'edit-schedule-event'
-  ) {
-
-    event.stopPropagation();
-
-    openScheduleEventModal(
-      id
-    );
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'delete-schedule-event'
-  ) {
-
-    event.stopPropagation();
-
-    deleteScheduleEvent(
-      id
-    );
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'edit-exam'
-  ) {
-
-    openExamModal(id);
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'delete-exam'
-  ) {
-
-    deleteExam(id);
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'close-modal'
-  ) {
-
-    closeModal();
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'recalculate'
-  ) {
-
-    await generatePlan();
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'export'
-  ) {
-
-    exportData();
-
-    return;
-
-  }
-
-  if (
-    action ===
-    'reset'
-  ) {
-
-    resetData();
-
-  }
-
 }
 
 
@@ -4343,8 +4243,7 @@ function exportData() {
       state.exams,
 
     scheduleEvents:
-      state.scheduleEvents ||
-      [],
+      state.scheduleEvents,
 
     plan:
       state.plan,
@@ -4374,45 +4273,36 @@ function exportData() {
       blob
     );
 
-  const link =
+  const a =
     document.createElement(
       'a'
     );
 
-  link.href = url;
+  a.href = url;
 
-  link.download =
+  a.download =
     `tria-dades-${todayISO()}.json`;
 
-  document.body.appendChild(
-    link
-  );
-
-  link.click();
-
-  link.remove();
+  a.click();
 
   URL.revokeObjectURL(
     url
   );
-
 }
 
 
 /* =========================================================
-   RESET
+   RESTABLIR
    ========================================================= */
 
 function resetData() {
 
   if (
     !confirm(
-      'Això eliminarà totes les dades guardades en aquest navegador. Vols continuar?'
+      'AixÃ² eliminarÃ  totes les dades guardades en aquest navegador. Vols continuar?'
     )
   ) {
-
     return;
-
   }
 
   state =
@@ -4426,7 +4316,6 @@ function resetData() {
     'dashboard';
 
   render();
-
 }
 
 
@@ -4442,9 +4331,22 @@ document.addEventListener(
       event.key ===
       'Escape'
     ) {
-
       closeModal();
+    }
 
+  }
+);
+
+
+document.addEventListener(
+  'click',
+  event => {
+
+    if (
+      event.target?.id ===
+      'modal'
+    ) {
+      closeModal();
     }
 
   }
