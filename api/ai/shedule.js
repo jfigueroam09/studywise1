@@ -54,7 +54,7 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') {
     return res.status(405).json({
-      error: 'MÃ©todo no permitido'
+      error: 'Método no permitido'
     });
   }
 
@@ -66,7 +66,7 @@ export default async function handler(req, res) {
     if (!apiKey || !aiConfigured) {
       return res.status(503).json({
         error:
-          'La IA no estÃ¡ configurada. AÃ±ade GEMINI_API_KEY en Vercel.'
+          'La IA no está configurada. Añade GEMINI_API_KEY en Vercel.'
       });
     }
 
@@ -93,18 +93,18 @@ export default async function handler(req, res) {
               }
             },
             {
-              text: `Analiza esta fotografÃ­a de un horario escolar.
+              text: `Analiza esta fotografía de un horario escolar.
 
 Tu trabajo es convertir el horario visual en una lista estructurada de clases.
 
 Reglas:
-- Lee Ãºnicamente lo que aparezca en la imagen.
-- Identifica los dÃ­as de lunes a viernes.
-- Identifica las horas de inicio y finalizaciÃ³n.
+- Lee únicamente lo que aparezca en la imagen.
+- Identifica los días de lunes a viernes.
+- Identifica las horas de inicio y finalización.
 - Identifica la asignatura o actividad.
-- Si aparece un profesor, aula o informaciÃ³n adicional Ãºtil, puedes ponerla en notes.
+- Si aparece un profesor, aula o información adicional útil, puedes ponerla en notes.
 - No inventes clases que no se vean.
-- Si una celda estÃ¡ vacÃ­a, no la conviertas en una actividad.
+- Si una celda está vacía, no la conviertas en una actividad.
 - Si una asignatura ocupa varias horas consecutivas, crea una sola actividad con la hora inicial y final.
 - Usa siempre horas en formato HH:MM.
 - Usa estos valores para day:
@@ -148,7 +148,7 @@ Reglas:
 
     if (!text) {
       throw new Error(
-        'La IA no devolviÃ³ datos del horario.'
+        'La IA no devolvió datos del horario.'
       );
     }
 
