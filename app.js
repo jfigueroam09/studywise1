@@ -2153,60 +2153,75 @@ function tomorrowTasks() {
 
 function dashboardTomorrowItems() {
 
-  const schedule =
-    tomorrowSchedule();
+ function dashboardTomorrowItems() {
+  const tomorrow = new Date();
 
-  const tasks =
-    tomorrowTasks();
-
-
-  const items = [
-
-    ...schedule.map(
-      event => ({
-        type: 'schedule',
-        time:
-          event.startTime ||
-          '',
-        title:
-          event.title ||
-          event.subject ||
-          'Classe',
-        subject:
-          event.subject ||
-          '',
-        sort:
-          event.startTime ||
-          '99:99'
-      })
-    ),
-
-    ...tasks.map(
-      task => ({
-        type: 'task',
-        time: '',
-        title:
-          task.title ||
-          'Tasca',
-        subject:
-          task.subject ||
-          '',
-        sort: '99:98'
-      })
-    )
-
-  ];
-
-
-  return items.sort(
-    (a, b) =>
-      a.sort.localeCompare(
-        b.sort
-      )
+  tomorrow.setDate(
+    tomorrow.getDate() + 1
   );
 
-}
+  const weekdayNames = [
+    'sunday',
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday'
+  ];
 
+  const tomorrowDay =
+    weekdayNames[tomorrow.getDay()];
+
+  const tomorrowISO =
+    isoDay(tomorrow);
+
+  const classes =
+    state.scheduleEvents
+      .filter(event =>
+        String(event.day || '').toLowerCase() ===
+        tomorrowDay
+      )
+      .sort((a, b) =>
+        String(a.startTime || '')
+          .localeCompare(
+            String(b.startTime || '')
+          )
+      );
+
+  const tasks =
+    state.tasks
+      .filter(task =>
+        task.dueDate === tomorrowISO &&
+        task.status !== 'completed'
+      )
+      .sort((a, b) =>
+        String(a.dueDate || '')
+          .localeCompare(
+            String(b.dueDate || '')
+          )
+      );
+
+  const exams =
+    state.exams
+      .filter(exam =>
+        exam.date === tomorrowISO
+      )
+      .sort((a, b) =>
+        String(a.date || '')
+          .localeCompare(
+            String(b.date || '')
+          )
+      );
+
+  return {
+    date: tomorrow,
+    day: tomorrowDay,
+    classes,
+    tasks,
+    exams
+  };
+}
 
 function dashboardView() {
 
