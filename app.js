@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 /* =========================================================
-   TRIA Â· CONFIGURACIÃ“
+   TRIA · CONFIGURACIÓ
    ========================================================= */
 
 const SUPABASE_URL =
@@ -51,7 +51,7 @@ let pendingScheduleEvents = [];
 
 
 /* =========================================================
-   AUTENTICACIÃ“
+   AUTENTICACIÓ
    ========================================================= */
 
 function loadState() {
@@ -141,7 +141,7 @@ async function handleAuth(event) {
 
   button.textContent =
     authMode === 'login'
-      ? 'Iniciant sessiÃ³...'
+      ? 'Iniciant sessió...'
       : 'Creant compte...';
 
   try {
@@ -178,7 +178,7 @@ async function handleAuth(event) {
       if (!data.session) {
 
         successBox.textContent =
-          'Compte creat. Revisa el teu correu per confirmar lâ€™adreÃ§a abans dâ€™iniciar sessiÃ³.';
+          'Compte creat. Revisa el teu correu per confirmar l’adreça abans d’iniciar sessió.';
 
         successBox.classList.remove(
           'hidden'
@@ -206,7 +206,7 @@ async function handleAuth(event) {
 
     button.textContent =
       authMode === 'login'
-        ? 'Iniciar sessiÃ³'
+        ? 'Iniciar sessió'
         : 'Crear compte';
   }
 }
@@ -225,7 +225,7 @@ function authErrorMessage(error) {
       'invalid login credentials'
     )
   ) {
-    return 'El correu o la contrasenya no sÃ³n correctes.';
+    return 'El correu o la contrasenya no són correctes.';
   }
 
   if (
@@ -233,7 +233,7 @@ function authErrorMessage(error) {
       'email not confirmed'
     )
   ) {
-    return 'Primer has de confirmar el teu correu electrÃ²nic.';
+    return 'Primer has de confirmar el teu correu electrònic.';
   }
 
   if (
@@ -241,7 +241,7 @@ function authErrorMessage(error) {
       'user already registered'
     )
   ) {
-    return 'Aquest correu ja tÃ© un compte.';
+    return 'Aquest correu ja té un compte.';
   }
 
   if (
@@ -249,12 +249,12 @@ function authErrorMessage(error) {
       'password should be at least'
     )
   ) {
-    return 'La contrasenya ha de tenir almenys 6 carÃ cters.';
+    return 'La contrasenya ha de tenir almenys 6 caràcters.';
   }
 
   return (
     message ||
-    'No sâ€™ha pogut completar lâ€™operaciÃ³.'
+    'No s’ha pogut completar l’operació.'
   );
 }
 
@@ -329,7 +329,7 @@ function todayISO() {
 function formatDate(value) {
 
   if (!value) {
-    return 'â€”';
+    return '—';
   }
 
   const d =
@@ -416,7 +416,7 @@ function chatMarkdown(text) {
         '<em>$1</em>'
       )
       .replace(
-        /^\s*[-â€¢] (.+)$/gm,
+        /^\s*[-•] (.+)$/gm,
         '<li>$1</li>'
       )
       .replace(
@@ -541,7 +541,7 @@ function authView() {
         <div class="auth-heading">
 
           <p class="eyebrow">
-            OrganitzaciÃ³ acadÃ¨mica
+            Organització acadèmica
           </p>
 
           <h1>
@@ -555,8 +555,8 @@ function authView() {
           <p>
             ${
               authMode === 'login'
-                ? 'Inicia sessiÃ³ per continuar amb TRIA.'
-                : 'Crea un compte per comenÃ§ar a organitzar el teu estudi.'
+                ? 'Inicia sessió per continuar amb TRIA.'
+                : 'Crea un compte per començar a organitzar el teu estudi.'
             }
           </p>
 
@@ -569,7 +569,7 @@ function authView() {
 
           <label>
 
-            Correu electrÃ²nic
+            Correu electrònic
 
             <input
               id="auth-email"
@@ -593,7 +593,7 @@ function authView() {
                   ? 'current-password'
                   : 'new-password'
               }"
-              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              placeholder="••••••••"
               minlength="6"
               required
             >
@@ -616,7 +616,7 @@ function authView() {
           >
             ${
               authMode === 'login'
-                ? 'Iniciar sessiÃ³'
+                ? 'Iniciar sessió'
                 : 'Crear compte'
             }
           </button>
@@ -641,7 +641,7 @@ function authView() {
             ${
               authMode === 'login'
                 ? 'Crear compte'
-                : 'Iniciar sessiÃ³'
+                : 'Iniciar sessió'
             }
           </button>
 
@@ -683,7 +683,7 @@ function bindAuthEvents() {
 
 
 /* =========================================================
-   NAVEGACIÃ“
+   NAVEGACIÓ
    ========================================================= */
 
 function navItems() {
@@ -691,12 +691,12 @@ function navItems() {
   return [
     ['dashboard', 'Tauler', 'dashboard'],
     ['tasks', 'Tasques', 'tasks'],
-    ['exams', 'ExÃ mens', 'exams'],
+    ['exams', 'Exàmens', 'exams'],
     ['schedule', 'Horari', 'calendar'],
     ['planner', 'Planificador', 'planner'],
     ['chat', "IA d'estudi", 'chat'],
-    ['progress', 'ProgrÃ©s', 'progress'],
-    ['settings', 'AvaluaciÃ³', 'settings']
+    ['progress', 'Progrés', 'progress'],
+    ['settings', 'Avaluació', 'settings']
   ];
 }
 
@@ -780,7 +780,7 @@ function layout() {
             class="logout-btn"
             data-action="logout"
           >
-            Tancar sessiÃ³
+            Tancar sessió
           </button>
 
         </div>
@@ -794,7 +794,7 @@ function layout() {
           <div>
 
             <p class="eyebrow">
-              OrganitzaciÃ³ acadÃ¨mica
+              Organització acadèmica
             </p>
 
             <h1>
@@ -979,7 +979,7 @@ function taskCard(task) {
           <p>
             ${esc(
               task.description ||
-              'Sense descripciÃ³'
+              'Sense descripció'
             )}
           </p>
 
@@ -1060,23 +1060,23 @@ function taskCard(task) {
 
 const teacherQuotes = [
 
-  "En l'Ã mbit estrictament acadÃ¨mic, no s'hauria d'utilitzar per adquirir coneixements, hÃ bits, esperit crÃ­tic, etc., nomÃ©s s'hauria d'utilitzar en Ã mbits on hi hagi un adult que indiqui el bon i mal Ãºs d'aquesta eina.",
+  "En l'àmbit estrictament acadèmic, no s'hauria d'utilitzar per adquirir coneixements, hàbits, esperit crític, etc., només s'hauria d'utilitzar en àmbits on hi hagi un adult que indiqui el bon i mal ús d'aquesta eina.",
 
-  "Com a docent, crec que l'alumne ha d'utilitzar la IA per ajudar-se a entendre i practicar, no perquÃ¨ li faci la feina. Primer ha d'intentar resoldre la tasca pel seu compte i, desprÃ©s, fer-la servir per demanar explicacions o pistes, generar exercicis i revisar el que ha fet, no per obtenir la resposta feta. TambÃ© ha de contrastar sempre la informaciÃ³, perquÃ¨ la IA s'equivoca, i ser transparent sobre com l'ha utilitzada. En definitiva, la IA ajuda a aprendre quan et fa mÃ©s capaÃ§; si en depens per fer allÃ² que hauries de saber fer sol, t'estÃ  perjudicant.",
+  "Com a docent, crec que l'alumne ha d'utilitzar la IA per ajudar-se a entendre i practicar, no perquè li faci la feina. Primer ha d'intentar resoldre la tasca pel seu compte i, després, fer-la servir per demanar explicacions o pistes, generar exercicis i revisar el que ha fet, no per obtenir la resposta feta. També ha de contrastar sempre la informació, perquè la IA s'equivoca, i ser transparent sobre com l'ha utilitzada. En definitiva, la IA ajuda a aprendre quan et fa més capaç; si en depens per fer allò que hauries de saber fer sol, t'està perjudicant.",
 
-  "Com un reforÃ§ de l'aprenentatge, no com un aprenentatge. Hi ha d'haver un filtre humÃ .",
+  "Com un reforç de l'aprenentatge, no com un aprenentatge. Hi ha d'haver un filtre humà.",
 
-  "El problema Ã©s que la IA Ã©s addictiva. Primer has de tractar d'esforÃ§ar-te a entendre les coses i resoldre-les per tu mateix. Llavors la IA pot resoldre't dubtes particulars. El problema Ã©s quan ni pensem quÃ¨ ens demanen, li passem el problema a la IA i enganxem sense el que ens dona, sense entendre-ho ni raonar-ho. Sovint, no fent la pregunta adequada i concisa i rebent resultats ambigus.",
+  "El problema és que la IA és addictiva. Primer has de tractar d'esforçar-te a entendre les coses i resoldre-les per tu mateix. Llavors la IA pot resoldre't dubtes particulars. El problema és quan ni pensem què ens demanen, li passem el problema a la IA i enganxem sense el que ens dona, sense entendre-ho ni raonar-ho. Sovint, no fent la pregunta adequada i concisa i rebent resultats ambigus.",
 
   "Tant per aprofundir sobre un tema com a l'hora de resoldre dubtes.",
 
-  "De manera Ã¨tica i responsable.",
+  "De manera ètica i responsable.",
 
-  "Com ajuda a fomentar el pensament crÃ­tic.",
+  "Com ajuda a fomentar el pensament crític.",
 
-  "Per poder extreure informaciÃ³ de diferents formats de continguts i poder obtenir un resum endreÃ§at on estigui tot connectat.",
+  "Per poder extreure informació de diferents formats de continguts i poder obtenir un resum endreçat on estigui tot connectat.",
 
-  "Haurien d'aprendre les seves limitacions i contraindicacions i no haurien de recÃ³rrer a la IA com a primera opciÃ³."
+  "Haurien d'aprendre les seves limitacions i contraindicacions i no haurien de recórrer a la IA com a primera opció."
 
 ];
 
@@ -1180,18 +1180,18 @@ function dashboardView() {
 
           <p>
             Consulta les tasques, prepara els
-            exÃ mens i deixa que la IA t'ajudi
+            exàmens i deixa que la IA t'ajudi
             a ordenar les prioritats.
           </p>
 
           <div class="teacher-quote">
 
             <div class="teacher-quote-label">
-              âœ¦ Veu del professorat sobre l'IA
+              ✦ Veu del professorat sobre l'IA
             </div>
 
             <blockquote>
-              â€œ${esc(teacherQuote)}â€
+              “${esc(teacherQuote)}”
             </blockquote>
 
           </div>
@@ -1218,14 +1218,14 @@ function dashboardView() {
         )}
 
         ${statCard(
-          'ExÃ mens propers',
+          'Exàmens propers',
           upcomingExams.length,
-          'SegÃ¼ents dates',
+          'Següents dates',
           'exams'
         )}
 
         ${statCard(
-          'ProgrÃ©s',
+          'Progrés',
           `${percent}%`,
           `${completedMinutes} / ${totalMinutes || 0} min`,
           'progress'
@@ -1234,7 +1234,7 @@ function dashboardView() {
         ${statCard(
           'Urgents',
           urgent.length,
-          'En els prÃ²xims 2 dies',
+          'En els pròxims 2 dies',
           'clock'
         )}
 
@@ -1253,7 +1253,7 @@ function dashboardView() {
               </p>
 
               <h2>
-                QuÃ¨ hauries de fer ara?
+                Què hauries de fer ara?
               </h2>
 
             </div>
@@ -1283,7 +1283,7 @@ function dashboardView() {
               `
                 <div class="empty">
                   No tens tasques pendents.
-                  Afegeix-ne una per comenÃ§ar.
+                  Afegeix-ne una per començar.
                 </div>
               `
             }
@@ -1299,11 +1299,11 @@ function dashboardView() {
             <div>
 
               <p class="eyebrow">
-                Calendari acadÃ¨mic
+                Calendari acadèmic
               </p>
 
               <h2>
-                PrÃ²xims exÃ mens
+                Pròxims exàmens
               </h2>
 
             </div>
@@ -1312,7 +1312,7 @@ function dashboardView() {
               class="text-btn"
               data-page="exams"
             >
-              Veure exÃ mens
+              Veure exàmens
               ${icon('arrow', 15)}
             </button>
 
@@ -1379,7 +1379,7 @@ function dashboardView() {
 
               `
                 <div class="empty">
-                  No hi ha exÃ mens registrats.
+                  No hi ha exàmens registrats.
                 </div>
               `
             }
@@ -1403,7 +1403,7 @@ function dashboardView() {
             <h2>
               ${
                 state.plan?.summary
-                  ? 'RecomanaciÃ³ de la IA'
+                  ? 'Recomanació de la IA'
                   : 'Encara no tens un pla generat'
               }
             </h2>
@@ -1423,7 +1423,7 @@ function dashboardView() {
         <p class="plan-summary">
           ${esc(
             state.plan?.summary ||
-            'Afegeix tasques i exÃ mens i prem Â«Recalcular amb IAÂ» per generar una proposta.'
+            'Afegeix tasques i exàmens i prem «Recalcular amb IA» per generar una proposta.'
           )}
         </p>
 
@@ -1456,7 +1456,7 @@ function tasksView() {
         <div>
 
           <p class="eyebrow">
-            GestiÃ³
+            Gestió
           </p>
 
           <h2>
@@ -1477,8 +1477,8 @@ function tasksView() {
           `
             <div class="empty large">
               Encara no tens tasques.
-              Crea la primera amb el botÃ³
-              Â«Nova tascaÂ».
+              Crea la primera amb el botó
+              «Nova tasca».
             </div>
           `
         }
@@ -1491,7 +1491,7 @@ function tasksView() {
 
 
 /* =========================================================
-   EXÃ€MENS
+   EXÀMENS
    ========================================================= */
 
 function examsView() {
@@ -1516,7 +1516,7 @@ function examsView() {
           </p>
 
           <h2>
-            ExÃ mens
+            Exàmens
           </h2>
 
         </div>
@@ -1601,7 +1601,7 @@ function examsView() {
 
           `
             <div class="empty large">
-              No hi ha exÃ mens registrats.
+              No hi ha exàmens registrats.
             </div>
           `
         }
@@ -1615,7 +1615,7 @@ function examsView() {
 
 
 /* =========================================================
-   HORARI Â· CLASSES I ESCANEIG IA
+   HORARI · CLASSES I ESCANEIG IA
    ========================================================= */
 
 const scheduleDays = [
@@ -1692,8 +1692,8 @@ function scheduleView() {
         <div>
           <strong>La IA pot crear-lo per tu</strong>
           <p>
-            Fotografia l'horari de l'institut. TRIA detectarÃ 
-            els dies, les hores i les assignatures i et deixarÃ 
+            Fotografia l'horari de l'institut. TRIA detectarà
+            els dies, les hores i les assignatures i et deixarà
             revisar el resultat abans de guardar-lo.
           </p>
         </div>
@@ -1784,8 +1784,8 @@ function scheduleView() {
               <div>
                 <strong>Horari connectat amb la IA</strong>
                 <p>
-                  Quan creÃ¯s o recalculis el teu pla d'estudi,
-                  TRIA tindrÃ  en compte aquestes hores ocupades.
+                  Quan creïs o recalculis el teu pla d'estudi,
+                  TRIA tindrà en compte aquestes hores ocupades.
                 </p>
               </div>
             </section>
@@ -1837,12 +1837,12 @@ function openScheduleEventModal(id = null) {
     <div class="form-grid">
 
       <label class="full">
-        TÃ­tol
+        Títol
         <input
           name="title"
           required
           value="${esc(event?.title || '')}"
-          placeholder="Ex. MatemÃ tiques"
+          placeholder="Ex. Matemàtiques"
         >
       </label>
 
@@ -1851,7 +1851,7 @@ function openScheduleEventModal(id = null) {
         <input
           name="subject"
           value="${esc(event?.subject || '')}"
-          placeholder="Ex. MatemÃ tiques"
+          placeholder="Ex. Matemàtiques"
         >
       </label>
 
@@ -1899,7 +1899,7 @@ function openScheduleEventModal(id = null) {
       </label>
 
       <label>
-        Hora de finalitzaciÃ³
+        Hora de finalització
         <input
           name="endTime"
           type="time"
@@ -1926,7 +1926,7 @@ function openScheduleEventModal(id = null) {
         class="btn secondary"
         data-action="close-modal"
       >
-        CancelÂ·lar
+        Cancel·lar
       </button>
 
       <button
@@ -1954,7 +1954,7 @@ function saveScheduleEventFromForm(event) {
   const endTime = String(data.get('endTime') || '');
 
   if (!startTime || !endTime || endTime <= startTime) {
-    alert('Lâ€™hora de finalitzaciÃ³ ha de ser posterior a lâ€™hora dâ€™inici.');
+    alert('L’hora de finalització ha de ser posterior a l’hora d’inici.');
     return;
   }
 
@@ -1970,7 +1970,7 @@ function saveScheduleEventFromForm(event) {
   };
 
   if (!item.title) {
-    alert('Escriu un tÃ­tol.');
+    alert('Escriu un títol.');
     return;
   }
 
@@ -1993,7 +1993,7 @@ function saveScheduleEventFromForm(event) {
 
 function deleteScheduleEvent(id) {
 
-  if (!confirm('Vols eliminar aquesta activitat de lâ€™horari?')) {
+  if (!confirm('Vols eliminar aquesta activitat de l’horari?')) {
     return;
   }
 
@@ -2026,7 +2026,7 @@ function openScheduleImportModal(events, sourceName = '') {
     document.querySelector('#modal-form');
 
   document.querySelector('#modal-eyebrow').textContent =
-    'IA Â· LECTURA DE Lâ€™IMATGE';
+    'IA · LECTURA DE L’IMATGE';
 
   document.querySelector('#modal-title').textContent =
     'Revisa el teu horari';
@@ -2102,7 +2102,7 @@ function openScheduleImportModal(events, sourceName = '') {
         class="btn secondary"
         data-action="close-modal"
       >
-        CancelÂ·lar
+        Cancel·lar
       </button>
 
       <button
@@ -2157,7 +2157,7 @@ function saveScheduleImportFromForm(event) {
   );
 
   if (!valid.length) {
-    alert('No hi ha cap activitat vÃ lida per guardar.');
+    alert('No hi ha cap activitat vàlida per guardar.');
     return;
   }
 
@@ -2230,13 +2230,13 @@ async function handleScheduleImage(event) {
     if (!response.ok) {
       throw new Error(
         data.error ||
-        'No sâ€™ha pogut llegir lâ€™horari.'
+        'No s’ha pogut llegir l’horari.'
       );
     }
 
     if (!Array.isArray(data.events) || !data.events.length) {
       throw new Error(
-        'La IA no ha detectat cap classe. Prova amb una foto mÃ©s clara i frontal.'
+        'La IA no ha detectat cap classe. Prova amb una foto més clara i frontal.'
       );
     }
 
@@ -2248,7 +2248,7 @@ async function handleScheduleImage(event) {
   } catch (error) {
 
     alert(
-      `No sâ€™ha pogut llegir lâ€™horari: ${error.message}`
+      `No s’ha pogut llegir l’horari: ${error.message}`
     );
 
   } finally {
@@ -2525,7 +2525,7 @@ function plannerView() {
                                 ? `Estudi: ${task.title}`
                                 : exam?.subject
                                   ? `Estudi: ${exam.subject}`
-                                  : 'SessiÃ³ dâ€™estudi';
+                                  : 'Sessió d’estudi';
 
                             return `
                               <div
@@ -2614,7 +2614,7 @@ function chatView() {
 
             <span>
               Pot consultar les teves tasques
-              i exÃ mens per ajudar-te
+              i exàmens per ajudar-te
               a organitzar-te.
             </span>
 
@@ -2667,8 +2667,8 @@ function chatView() {
                   <p>
                     Pregunta'm com prioritzar
                     les tasques, quan estudiar
-                    o com preparar els prÃ²xims
-                    exÃ mens.
+                    o com preparar els pròxims
+                    exàmens.
                   </p>
 
                 </div>
@@ -2707,7 +2707,7 @@ function chatView() {
 
 
 /* =========================================================
-   PROGRÃ‰S
+   PROGRÉS
    ========================================================= */
 
 function progressView() {
@@ -2769,7 +2769,7 @@ function progressView() {
           </p>
 
           <h2>
-            ProgrÃ©s
+            Progrés
           </h2>
 
         </div>
@@ -2820,7 +2820,7 @@ function progressView() {
             </p>
 
             <h2>
-              Activitat acadÃ¨mica
+              Activitat acadèmica
             </h2>
 
           </div>
@@ -2848,7 +2848,7 @@ function progressView() {
 
 
 /* =========================================================
-   AVALUACIÃ“
+   AVALUACIÓ
    ========================================================= */
 
 function settingsView() {
@@ -2869,7 +2869,7 @@ function settingsView() {
           </p>
 
           <h2>
-            AvaluaciÃ³
+            Avaluació
           </h2>
 
         </div>
@@ -2885,7 +2885,7 @@ function settingsView() {
             <div>
 
               <p class="eyebrow">
-                SessiÃ³ actual
+                Sessió actual
               </p>
 
               <h2>
@@ -2899,7 +2899,7 @@ function settingsView() {
           <div class="setting-row">
 
             <span>
-              Correu electrÃ²nic
+              Correu electrònic
             </span>
 
             <strong>
@@ -2923,7 +2923,7 @@ function settingsView() {
           <div class="setting-row">
 
             <span>
-              ExÃ mens
+              Exàmens
             </span>
 
             <strong>
@@ -2986,7 +2986,7 @@ function settingsView() {
               class="btn ghost"
               data-action="logout"
             >
-              Tancar sessiÃ³
+              Tancar sessió
             </button>
 
           </div>
@@ -3338,7 +3338,7 @@ async function handleAction(event) {
 
 
 /* =========================================================
-   TASQUES Â· CRUD
+   TASQUES · CRUD
    ========================================================= */
 
 function openTaskModal(
@@ -3384,7 +3384,7 @@ function openTaskModal(
 
       <label>
 
-        TÃ­tol
+        Títol
 
         <input
           name="title"
@@ -3392,7 +3392,7 @@ function openTaskModal(
           value="${esc(
             task?.title || ''
           )}"
-          placeholder="Ex. Preparar presentaciÃ³"
+          placeholder="Ex. Preparar presentació"
         >
 
       </label>
@@ -3406,19 +3406,19 @@ function openTaskModal(
           value="${esc(
             task?.subject || ''
           )}"
-          placeholder="Ex. HistÃ²ria"
+          placeholder="Ex. Història"
         >
 
       </label>
 
       <label class="full">
 
-        DescripciÃ³
+        Descripció
 
         <textarea
           name="description"
           rows="3"
-          placeholder="QuÃ¨ has de fer?"
+          placeholder="Què has de fer?"
         >${esc(
           task?.description || ''
         )}</textarea>
@@ -3427,7 +3427,7 @@ function openTaskModal(
 
       <label>
 
-        Data lÃ­mit
+        Data límit
 
         <input
           name="dueDate"
@@ -3480,7 +3480,7 @@ function openTaskModal(
                         : ''
                     }
                   >
-                    ${n} Â·
+                    ${n} ·
                     ${difficultyLabel(n)}
                   </option>
                 `
@@ -3541,7 +3541,7 @@ function openTaskModal(
         class="btn secondary"
         data-action="close-modal"
       >
-        CancelÂ·lar
+        Cancel·lar
       </button>
 
       <button
@@ -3690,7 +3690,7 @@ function toggleTask(id) {
 
 
 /* =========================================================
-   EXÃ€MENS Â· CRUD
+   EXÀMENS · CRUD
    ========================================================= */
 
 function openExamModal(
@@ -3721,7 +3721,7 @@ function openExamModal(
   document.querySelector(
     '#modal-eyebrow'
   ).textContent =
-    'EXÃ€MENS';
+    'EXÀMENS';
 
   document.querySelector(
     '#modal-title'
@@ -3744,7 +3744,7 @@ function openExamModal(
           value="${esc(
             exam?.subject || ''
           )}"
-          placeholder="Ex. MatemÃ tiques"
+          placeholder="Ex. Matemàtiques"
         >
 
       </label>
@@ -3802,7 +3802,7 @@ function openExamModal(
                         : ''
                     }
                   >
-                    ${n} Â·
+                    ${n} ·
                     ${difficultyLabel(n)}
                   </option>
                 `
@@ -3840,7 +3840,7 @@ function openExamModal(
         class="btn secondary"
         data-action="close-modal"
       >
-        CancelÂ·lar
+        Cancel·lar
       </button>
 
       <button
@@ -3976,7 +3976,7 @@ function closeModal() {
 
 
 /* =========================================================
-   IA Â· PLA D'ESTUDI
+   IA · PLA D'ESTUDI
    ========================================================= */
 
 async function generatePlan() {
@@ -4036,7 +4036,7 @@ async function generatePlan() {
 
       throw new Error(
         data.error ||
-        'No sâ€™ha pogut generar el pla.'
+        'No s’ha pogut generar el pla.'
       );
 
     }
@@ -4099,7 +4099,7 @@ async function generatePlan() {
   } catch (error) {
 
     alert(
-      `No sâ€™ha pogut generar el pla: ${error.message}`
+      `No s’ha pogut generar el pla: ${error.message}`
     );
 
     buttons.forEach(
@@ -4121,7 +4121,7 @@ async function generatePlan() {
 
 
 /* =========================================================
-   IA Â· XAT
+   IA · XAT
    ========================================================= */
 
 async function sendChat(event) {
@@ -4299,7 +4299,7 @@ function resetData() {
 
   if (
     !confirm(
-      'AixÃ² eliminarÃ  totes les dades guardades en aquest navegador. Vols continuar?'
+      'Això eliminarà totes les dades guardades en aquest navegador. Vols continuar?'
     )
   ) {
     return;
