@@ -2150,10 +2150,9 @@ function tomorrowTasks() {
 
 }
 
-
-function dashboardTomorrowItems() {
-
  function dashboardTomorrowItems() {
+ function dashboardTomorrowItems() {
+
   const tomorrow = new Date();
 
   tomorrow.setDate(
@@ -2171,60 +2170,110 @@ function dashboardTomorrowItems() {
   ];
 
   const tomorrowDay =
-    weekdayNames[tomorrow.getDay()];
+    weekdayNames[
+      tomorrow.getDay()
+    ];
 
   const tomorrowISO =
     isoDay(tomorrow);
 
+
   const classes =
     state.scheduleEvents
-      .filter(event =>
-        String(event.day || '').toLowerCase() ===
-        tomorrowDay
-      )
-      .sort((a, b) =>
-        String(a.startTime || '')
-          .localeCompare(
-            String(b.startTime || '')
+      .filter(event => {
+
+        const day =
+          String(
+            event.day || ''
+          )
+            .trim()
+            .toLowerCase();
+
+        return (
+          day === tomorrowDay ||
+          day ===
+            new Intl.DateTimeFormat(
+              'en-US',
+              {
+                weekday: 'long'
+              }
+            ).format(tomorrow).toLowerCase()
+        );
+
+      })
+      .sort(
+        (a, b) =>
+          String(
+            a.startTime || ''
+          ).localeCompare(
+            String(
+              b.startTime || ''
+            )
           )
       );
+
 
   const tasks =
     state.tasks
-      .filter(task =>
-        task.dueDate === tomorrowISO &&
-        task.status !== 'completed'
-      )
-      .sort((a, b) =>
-        String(a.dueDate || '')
-          .localeCompare(
-            String(b.dueDate || '')
-          )
+      .filter(
+        task =>
+          task.dueDate ===
+            tomorrowISO &&
+          task.status !==
+            'completed'
       );
+
 
   const exams =
     state.exams
-      .filter(exam =>
-        exam.date === tomorrowISO
-      )
-      .sort((a, b) =>
-        String(a.date || '')
-          .localeCompare(
-            String(b.date || '')
-          )
+      .filter(
+        exam =>
+          exam.date ===
+          tomorrowISO
       );
 
-  return {
-    date: tomorrow,
-    day: tomorrowDay,
-    classes,
-    tasks,
-    exams
-  };
+
+  return [
+    ...classes.map(
+      event => ({
+        type: 'schedule',
+        time:
+          event.startTime ||
+          '—',
+        title:
+          event.subject ||
+          event.title ||
+          'Classe',
+        subject:
+          event.subject || ''
+      })
+    ),
+
+    ...tasks.map(
+      task => ({
+        type: 'task',
+        time: '—',
+        title:
+          task.title ||
+          'Tasca',
+        subject:
+          task.subject || ''
+      })
+    ),
+
+    ...exams.map(
+      exam => ({
+        type: 'exam',
+        time: '—',
+        title:
+          exam.title ||
+          'Examen',
+        subject:
+          exam.subject || ''
+      })
+    )
+  ];
 }
-
-function dashboardView() {
-
   const pending =
     pendingTasks();
 
