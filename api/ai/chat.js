@@ -2,7 +2,7 @@ import { aiConfigured, openAI, outputText } from '../../ai.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'MÃ©todo no permitido' });
+    return res.status(405).json({ error: 'Método no permitido' });
   }
 
   try {
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     } = req.body || {};
 
     if (!message.trim()) {
-      return res.status(400).json({ error: 'Mensaje vacÃ­o' });
+      return res.status(400).json({ error: 'Mensaje vacío' });
     }
 
     if (!aiConfigured) {
@@ -24,8 +24,8 @@ export default async function handler(req, res) {
 
       return res.status(200).json({
         answer: pending
-          ? `Con tus datos actuales, empezarÃ­a por Â«${pending.title}Â», porque su fecha de entrega es ${pending.dueDate}.`
-          : 'Primero aÃ±ade tus tareas y exÃ¡menes para poder ayudarte a priorizarlos.',
+          ? `Con tus datos actuales, empezaría por «${pending.title}», porque su fecha de entrega es ${pending.dueDate}.`
+          : 'Primero añade tus tareas y exámenes para poder ayudarte a priorizarlos.',
         mode: 'demo'
       });
     }
@@ -37,18 +37,18 @@ export default async function handler(req, res) {
         exams,
         scheduleEvents
       }),
-      `Eres el orientador de estudio de TRIA, una aplicaciÃ³n para organizar el estudio de estudiantes de Bachillerato.
+      `Eres el orientador de estudio de TRIA, una aplicación para organizar el estudio de estudiantes de Bachillerato.
 
 IMPORTANTE:
-- El nombre de la aplicaciÃ³n es TRIA.
+- El nombre de la aplicación es TRIA.
 - Nunca menciones ni uses el nombre "StudyWise".
-- Cuando te refieras a la aplicaciÃ³n, di siempre "TRIA".
+- Cuando te refieras a la aplicación, di siempre "TRIA".
 - Ayuda a organizar el tiempo y priorizar.
 - Ten en cuenta el horario semanal del estudiante cuando recomiendes momentos de estudio.
 - No propongas estudiar durante clases u otras actividades registradas.
 - No hagas tareas ni des respuestas para copiar.
-- Responde en espaÃ±ol.
-- Usa los datos acadÃ©micos proporcionados.
+- Responde en español.
+- Usa los datos académicos proporcionados.
 - Si faltan datos, dilo claramente.`,
       null
     );
