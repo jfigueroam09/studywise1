@@ -7180,8 +7180,8 @@ function teacherQuoteView() {
 
         <blockquote>
           <span class="quote-mark">“</span>
-          <span class="teacher-quote-text">${escapeHtml(quote)}</span>
-          <span class="quote-mark closing">”</span>
+<span class="teacher-quote-text">${esc(quote)}</span>
+<span class="quote-mark closing">”</span>
         </blockquote>
 
         <button
