@@ -176,7 +176,9 @@ Reglas:
         .replace(/\s+/g, '')
         .replace(/[.,h]/g, ':');
 
-      match = compact.match(/^(\d{1,2}):(\d{2})$/);
+      match = compact.match(
+        /^(\d{1,2}):(\d{2})$/
+      );
 
       if (match) {
         const hour = Number(match[1]);
@@ -206,15 +208,25 @@ Reglas:
     const events = Array.isArray(result.events)
       ? result.events
           .map(event => ({
-            title: String(event?.title || '').trim(),
-            subject: String(event?.subject || '').trim(),
+            title: String(
+              event?.title || ''
+            ).trim(),
+
+            subject: String(
+              event?.subject || ''
+            ).trim(),
 
             day: allowedDays.has(event?.day)
               ? event.day
               : '',
 
-            startTime: normalizeTime(event?.startTime),
-            endTime: normalizeTime(event?.endTime),
+            startTime: normalizeTime(
+              event?.startTime
+            ),
+
+            endTime: normalizeTime(
+              event?.endTime
+            ),
 
             type: [
               'class',
@@ -225,7 +237,9 @@ Reglas:
               ? event.type
               : 'class',
 
-            notes: String(event?.notes || '').trim()
+            notes: String(
+              event?.notes || ''
+            ).trim()
           }))
           .filter(event =>
             event.title &&
