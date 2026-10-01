@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const SUPABASE_URL = 'PEGA_AQUI_TU_SUPABASE_URL';
+const SUPABASE_URL = https://tzyslkglsywfiwuhtgrj.supabase.co;
 const SUPABASE_PUBLISHABLE_KEY = 'PEGA_AQUI_TU_PUBLISHABLE_KEY';
 
 const supabase = createClient(
