@@ -2035,11 +2035,27 @@ document.addEventListener(
    ========================================================= */
 
 const teacherQuotes = [
-  'La constància acostuma a donar més resultat que estudiar-ho tot de cop.',
-  'Quan organitzes el temps, també guanyes tranquil·litat.',
-  'No cal fer-ho tot avui: cal saber què toca ara.',
-  'Un bon pla deixa espai per estudiar i també per descansar.'
+  `En l'àmbit estrictament acadèmic, no s'hauria d'utilitzar per adquirir coneixements, hàbits, esperit crític, etc.., només s'hauria d'utilitzar en àmbits on hi hagi un adult que indiqui el bon i mal ús d'aquesta eina.`,
+
+  `Com a docent, crec que l'alumne ha d'utilitzar la IA per ajudar-se a entendre i practicar, no perquè li faci la feina. Primer ha d'intentar resoldre la tasca pel seu compte i, després, fer-la servir per demanar explicacions o pistes, generar exercicis i revisar el que ha fet, no per obtenir la resposta feta. També ha de contrastar sempre la informació, perquè la IA s'equivoca, i ser transparent sobre com l'ha utilitzada. En definitiva, la IA ajuda a aprendre quan et fa més capaç; si en depens per fer allò que hauries de saber fer sol, t'està perjudicant.`,
+
+  `Com un reforç de l'aprenentatge, no com un aprenentatge. Hi ha d'haver un filtre humà.`,
+
+  `El problema és que la IA és addictiva. Primer has de tractar d'esforçar-te a entendre les coses i resoldre-les per tu mateix. Llavors la IA pot resoldre't dubtes particulars. El problema és quan ni pensem què ens demanen, li passem el problema a la IA i enganxem sense el que ens dona, sense entendre-ho ni raonar-ho. Sovint, no fent la pregunta adequada i concisa i rebent resultats ambigus.`,
+
+  `Tant per aprofundir sobre un tema com a l'hora de resoldre dubtes.`,
+
+  `De manera ètica i responsable.`,
+
+  `Com a ajuda per fomentar el pensament crític.`,
+
+  `Per poder extreure informació de diferents formats de continguts i poder obtenir un resum endreçat a on estigui tot connectat.`,
+
+  `Haurien d'aprendre les seves limitacions i contraindicacions i no haurien de recórrer a la IA com a primera opció.`
 ];
+
+let teacherQuoteIndex = 0;
+
 
 let teacherQuoteIndex = 0;
 
