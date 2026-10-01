@@ -2718,7 +2718,432 @@ function tomorrowTasks() {
     </section>
   `;
 }
-   
+function dashboardView() {
+
+  const pending =
+    pendingTasks();
+
+  const completed =
+    completedTasks();
+
+  const exams =
+    upcomingExams();
+
+  const urgent =
+    pending.filter(
+      task =>
+        daysUntil(
+          task.dueDate
+        ) <= 2
+    );
+
+  const completedMinutes =
+    completedTaskMinutes();
+
+  const totalMinutes =
+    totalTaskMinutes();
+
+  const percent =
+    progressPercent();
+
+  const tomorrowItems =
+    dashboardTomorrowItems();
+
+
+  return `
+    <div class="page dashboard-page">
+
+      <section class="dashboard-intro">
+
+        <div>
+
+          <p class="eyebrow">
+            AVUI
+          </p>
+
+          <h2>
+            El teu estudi,<br>
+            clar i al teu ritme.
+          </h2>
+
+          <p class="dashboard-intro-copy">
+            Tot el que necessita la teva atenció,
+            sense soroll.
+          </p>
+
+        </div>
+
+      </section>
+
+
+      <section class="tomorrow-card">
+
+        <div class="tomorrow-head">
+
+          <div>
+
+            <p class="eyebrow">
+              DEMÀ
+            </p>
+
+            <h3>
+              ${esc(
+                formatTomorrowLabel()
+              )}
+            </h3>
+
+          </div>
+
+          <span class="count-badge">
+            ${tomorrowItems.length}
+          </span>
+
+        </div>
+
+
+        ${
+          tomorrowItems.length
+            ? `
+              <div class="tomorrow-list">
+
+                ${tomorrowItems
+                  .map(
+                    item => `
+                      <div class="tomorrow-row">
+
+                        <span class="tomorrow-time">
+                          ${esc(
+                            item.time ||
+                            '—'
+                          )}
+                        </span>
+
+                        <div class="tomorrow-main">
+
+                          <strong>
+                            ${esc(
+                              item.title
+                            )}
+                          </strong>
+
+                          ${
+                            item.subject
+                              ? `
+                                <small>
+                                  ${esc(
+                                    item.subject
+                                  )}
+                                </small>
+                              `
+                              : ''
+                          }
+
+                        </div>
+
+                        <span class="tomorrow-type">
+                          ${
+                            item.type ===
+                            'task'
+                              ? 'TASCA'
+                              : 'HORARI'
+                          }
+                        </span>
+
+                      </div>
+                    `
+                  )
+                  .join('')}
+
+              </div>
+            `
+            : `
+              <div class="tomorrow-empty">
+
+                <div class="empty-icon">
+                  ${icon(
+                    'calendar',
+                    20
+                  )}
+                </div>
+
+                <div>
+
+                  <strong>
+                    Demà està lliure.
+                  </strong>
+
+                  <span>
+                    No tens cap classe ni tasca
+                    registrada per demà.
+                  </span>
+
+                </div>
+
+              </div>
+            `
+        }
+
+      </section>
+
+
+      <section class="stats-grid">
+
+        ${statCard(
+          'tasks',
+          'Tasques pendents',
+          String(
+            pending.length
+          ),
+          `${completed.length} completades`
+        )}
+
+        ${statCard(
+          'exams',
+          'Exàmens propers',
+          String(
+            exams.length
+          ),
+          'Properes dates'
+        )}
+
+        ${statCard(
+          'progress',
+          'Progrés',
+          `${percent}%`,
+          `${completedMinutes} / ${totalMinutes} min`
+        )}
+
+        ${statCard(
+          'clock',
+          'Urgents',
+          String(
+            urgent.length
+          ),
+          'Pròxims 2 dies'
+        )}
+
+      </section>
+
+
+      <section class="dashboard-columns">
+
+        <article class="panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <p class="eyebrow">
+                ATENCIÓ
+              </p>
+
+              <h3>
+                Què toca ara?
+              </h3>
+
+            </div>
+
+            <button
+              type="button"
+              class="link-btn"
+              data-page="tasks"
+            >
+              Veure tasques
+              ${icon(
+                'arrow',
+                13
+              )}
+            </button>
+
+          </div>
+
+
+          ${
+            pending.length
+              ? `
+                <div class="dashboard-task-list">
+
+                  ${pending
+                    .slice(0, 4)
+                    .map(
+                      task =>
+                        taskCard(
+                          task,
+                          true
+                        )
+                    )
+                    .join('')}
+
+                </div>
+              `
+              : `
+                <div class="panel-empty">
+
+                  ${icon(
+                    'check',
+                    20
+                  )}
+
+                  <strong>
+                    No tens tasques pendents.
+                  </strong>
+
+                  <span>
+                    Quan n’afegeixis, TRIA
+                    t’ajudarà a ordenar-les.
+                  </span>
+
+                </div>
+              `
+          }
+
+        </article>
+
+
+        <article class="panel">
+
+          <div class="panel-head">
+
+            <div>
+
+              <p class="eyebrow">
+                EXÀMENS
+              </p>
+
+              <h3>
+                Properes dates
+              </h3>
+
+            </div>
+
+            <button
+              type="button"
+              class="link-btn"
+              data-page="exams"
+            >
+              Veure exàmens
+              ${icon(
+                'arrow',
+                13
+              )}
+            </button>
+
+          </div>
+
+
+          ${
+            exams.length
+              ? `
+                <div class="upcoming-exams">
+
+                  ${exams
+                    .slice(0, 4)
+                    .map(
+                      exam => `
+                        <div class="exam-mini">
+
+                          <div>
+
+                            <strong>
+                              ${esc(
+                                exam.subject ||
+                                'Examen'
+                              )}
+                            </strong>
+
+                            <span>
+                              ${esc(
+                                exam.title ||
+                                'Examen'
+                              )}
+                            </span>
+
+                          </div>
+
+                          <time>
+                            ${esc(
+                              formatShortDate(
+                                exam.date
+                              )
+                            )}
+                          </time>
+
+                        </div>
+                      `
+                    )
+                    .join('')}
+
+                </div>
+              `
+              : `
+                <div class="panel-empty">
+
+                  ${icon(
+                    'calendar',
+                    20
+                  )}
+
+                  <strong>
+                    No hi ha exàmens.
+                  </strong>
+
+                  <span>
+                    Afegeix-ne un per començar
+                    a preparar-lo.
+                  </span>
+
+                </div>
+              `
+          }
+
+        </article>
+
+      </section>
+
+
+      <section class="ai-recommendation">
+
+        <div class="ai-recommendation-icon">
+          ${icon(
+            'sparkles',
+            18
+          )}
+        </div>
+
+        <div>
+
+          <p class="eyebrow">
+            RECOMANACIÓ DE TRIA
+          </p>
+
+          <h3>
+            ${
+              pending.length
+                ? `Comença per «${esc(
+                    pending[0].title
+                  )}».`
+                : 'Afegeix una tasca per començar.'
+            }
+          </h3>
+
+          <p>
+            ${
+              pending.length
+                ? 'És la primera tasca de la teva llista segons la data de lliurament.'
+                : 'TRIA necessita algunes dades acadèmiques per poder ordenar el teu estudi.'
+            }
+          </p>
+
+        </div>
+
+      </section>
+
+
+      ${teacherQuoteView()}
+
+    </div>
+  `;
+}   
 /* =========================================================
    PARTE 4 · TASQUES
    ========================================================= */
