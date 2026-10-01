@@ -3053,29 +3053,71 @@ select:focus {
 }
 
 @media (max-width: 720px) {
+  .app-shell {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
   .sidebar {
     position: static;
     width: 100%;
+    min-width: 0;
     min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid #24242d;
   }
 
-  .app-shell {
-    display: block;
+  .brand {
+    min-height: 76px;
+    padding: 16px 18px;
   }
 
-  .main {
-    width: 100%;
-    margin-left: 0;
-    padding: 0 15px 34px;
+  .brand-copy strong {
+    font-size: 18px;
   }
 
   .nav {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    padding: 10px 12px 12px;
+  }
+
+  .nav-item {
+    min-width: 0;
+    min-height: 52px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 10px;
+  }
+
+  .nav-item span {
+    display: none;
+  }
+
+  .nav-item .icon {
+    width: 22px;
+    height: 22px;
   }
 
   .sidebar-bottom {
-    padding-top: 5px;
+    display: none;
+  }
+
+  .main {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    padding: 0 15px 34px;
+  }
+
+  .topbar {
+    min-height: 78px;
+  }
+
+  .topbar h1 {
+    font-size: 20px;
   }
 
   .auth-screen {
@@ -3090,15 +3132,30 @@ select:focus {
 }
 
 @media (max-width: 480px) {
+  .brand-copy span {
+    display: none;
+  }
+
+  .school-logo {
+    width: 34px;
+    height: 34px;
+  }
+
+  .nav {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 5px;
+    padding: 9px 10px 11px;
+  }
+
+  .nav-item {
+    min-height: 48px;
+  }
+
   .auth-brand {
     margin-bottom: 26px !important;
   }
 
   .auth-heading h1 {
     font-size: 28px !important;
-  }
-
-  .nav {
-    grid-template-columns: 1fr;
   }
 }
