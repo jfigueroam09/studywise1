@@ -1874,6 +1874,21 @@ select:focus {
 }
 
 @media (max-width: 560px) {
+  .top-actions {
+  display: none;
+}
+
+.mobile-page-action {
+  display: flex;
+  width: 100%;
+  margin: 14px 0 18px;
+}
+
+.mobile-page-action .btn {
+  width: 100%;
+  min-height: 46px;
+  justify-content: center;
+}
   .brand-copy span {
     display: none;
   }
