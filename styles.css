@@ -174,7 +174,7 @@ img {
   margin-left: auto;
   flex: 0 0 32px;
   object-fit: contain;
-  background: #fff;
+background: transparent;
   border-radius: 7px;
   padding: 2px;
 }
