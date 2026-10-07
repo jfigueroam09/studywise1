@@ -1439,12 +1439,13 @@ function layout(content) {
           </div>
 
 
-          <div class="top-actions">
+    <div class="top-actions">
+  ${pageAction}
+</div>
 
-            ${pageAction}
-
-          </div>
-
+<div class="mobile-page-action">
+  ${pageAction}
+</div>
         </header>
 
 
