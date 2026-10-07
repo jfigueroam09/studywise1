@@ -1,0 +1,12 @@
+{
+  "name": "tria",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "check": "node --check app.js && node --check ai.js && node --check api/config.js && node --check api/ai/chat.js && node --check api/ai/plan.js && node --check api/ai/schedule.js && node --check api/ai/capture.js"
+  }
+}
