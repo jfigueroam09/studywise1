@@ -174,9 +174,9 @@ img {
   margin-left: auto;
   flex: 0 0 32px;
   object-fit: contain;
-  background: #fff;
-  border-radius: 7px;
-  padding: 2px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
 }
 
 /* =========================
@@ -1944,6 +1944,20 @@ select:focus {
 
   .top-actions {
     display: none;
+  }
+.mobile-page-action {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .mobile-page-action {
+    display: flex;
+    margin-top: 14px;
+  }
+
+  .mobile-page-action .btn {
+    width: 100%;
+    justify-content: center;
   }
 
   .auth-logo-frame {
