@@ -1451,7 +1451,9 @@ function layout(content) {
         <section id="content">
           ${content}
         </section>
-
+<div class="mobile-page-action">
+  ${pageAction}
+</div>
 
       </main>
 
